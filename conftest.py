@@ -100,6 +100,8 @@ def synthetic_export(tmp_path_factory, synthetic_afsis_root):
             "--root", str(synthetic_afsis_root),
             "--target", "OC",
             "--features", "pH_H2O", "EC", "Clay", "Sand",
+            "--lat-col", "Latitude",
+            "--lon-col", "Longitude",
             "--countries", *COUNTRIES,
             "--log-target",
             "--repeats", "2",   # fast
