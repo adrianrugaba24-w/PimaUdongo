@@ -476,7 +476,9 @@ def main(argv=None):
         f"{gr_txt or 'not estimable'}. Both families are in "
         f"results.partition_sensitivity (per-partition rows in "
         f"results.partition_rows, learner seed held constant), and the effect of "
-        f"the block COUNT is in results.block_sensitivity.")
+        f"the block COUNT is in results.block_sensitivity. Only the SPATIAL arm is "
+        f"run here, so none of these numbers is a validation gap: do not difference "
+        f"them against the random-CV column of the main table.")
     print(f"  finding: {partition_finding}")
 
     # ---------- 6. conformal interval under spatial CV --------------------

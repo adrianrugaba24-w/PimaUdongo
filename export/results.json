@@ -1,9 +1,9 @@
 {
  "schema_version": 2,
- "generated_at_utc": "2026-11-04T12:53:19+00:00",
- "runtime_seconds": 435.7,
+ "generated_at_utc": "2026-11-04T13:22:51+00:00",
+ "runtime_seconds": 261.7,
  "command": "python afsis_experiment.py",
- "git_commit": "a844e94",
+ "git_commit": "f134664",
  "package_versions": {
   "scikit-learn": "1.8.0",
   "numpy": "2.3.3",
@@ -843,7 +843,7 @@
    20,
    50
   ],
-  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The two uncertainties the fixed partition hides are reported separately: where the block boundaries fall (results.partition_sensitivity, methods kmeans_seed and grid_offset) and how many blocks are used (results.block_sensitivity). Family kmeans_seed: 5 KMeans seeds at 10 blocks (partitions compared up to cluster renumbering, which is arbitrary) gave 1 distinct partition, so the reported k-means blocking is insensitive to its own seed and the 0.000 SD of the main table is a MEASURED NULL (the estimate did not move), not evidence that fold placement cannot matter. Family grid_offset: boundaries redrawn with a random rotation and grid origin at a 7x7 grain, 5 seed run(s) -> 5 distinct partition(s); spread: random forest R2 0.676 +/- 0.034; ridge R2 0.496 +/- 0.022. Both families are in results.partition_sensitivity (per-partition rows in results.partition_rows, learner seed held constant), and the effect of the block COUNT is in results.block_sensitivity.",
+  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The two uncertainties the fixed partition hides are reported separately: where the block boundaries fall (results.partition_sensitivity, methods kmeans_seed and grid_offset) and how many blocks are used (results.block_sensitivity). Family kmeans_seed: 5 KMeans seeds at 10 blocks (partitions compared up to cluster renumbering, which is arbitrary) gave 1 distinct partition, so the reported k-means blocking is insensitive to its own seed and the 0.000 SD of the main table is a MEASURED NULL (the estimate did not move), not evidence that fold placement cannot matter. Family grid_offset: boundaries redrawn with a random rotation and grid origin at a 7x7 grain, 5 seed run(s) -> 5 distinct partition(s); spread: random forest R2 0.676 +/- 0.034; ridge R2 0.496 +/- 0.022. Both families are in results.partition_sensitivity (per-partition rows in results.partition_rows, learner seed held constant), and the effect of the block COUNT is in results.block_sensitivity. Only the SPATIAL arm is run here, so none of these numbers is a validation gap: do not difference them against the random-CV column of the main table.",
   "experiment_scope": {
    "quick": false,
    "main_tune": true,

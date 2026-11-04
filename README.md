@@ -192,8 +192,32 @@ be done before any of this is claimed about soils.
   More, smaller blocks make the task easier and drift toward random CV — with
   10 blocks the estimate sits near its most conservative value, and the reported
   spatial number should be read together with this curve.
-- **Partition sensitivity** (blocks redrawn from 5 KMeans seeds at 10 blocks,
-  one learner seed): …
+- **Partition sensitivity** — *two* blocking families, redrawn once per seed with
+  the learner seed fixed at `20261104` and the modal E1 hyperparameters held
+  constant, so only the partition moves. Partitions are compared up to cluster
+  renumbering (`partition_signature`), because cluster labels are arbitrary:
+  - `kmeans_seed` (the reported blocking, 10 blocks, 5 KMeans seeds) →
+    **1 distinct partition**: random forest 0.608 ± 0.000, ridge 0.457 ± 0.000.
+    The KMeans seed renumbers the blocks but never moves a boundary, so the
+    **0.000 SD in the model table is a measured null** — the estimate did not
+    move — and not evidence that fold placement cannot matter.
+  - `grid_offset` (rotated rectangular blocks: random rotation + random grid
+    origin, grain resolved from the data to 7×7 cells, 10–13 non-empty cells per
+    partition, 5 seeds) → **5 distinct partitions**: random forest
+    **0.676 ± 0.034** (range 0.644–0.729), ridge **0.496 ± 0.022** (range
+    0.478–0.534).
+  - Reported as is, including the uncomfortable part: the grid family scores
+    *higher* than the k-means blocking the headline uses (+0.068 R² for random
+    forest, +0.039 for ridge), so the spatial number depends on the blocking
+    **scheme**, not only on its seed — the reported KMeans/10-block choice is the
+    more conservative of the two. And the boundary-placement SD (±0.034) is about
+    a fifth of the validation gap (+0.151): the gap is larger than fold-placement
+    noise, but not by a wide margin. Fixed modal hyperparameters are why these
+    rows differ slightly from the fully nested-tuned table above.
+  - **E4b runs the spatial arm only.** These are therefore *not* validation gaps:
+    the `R² random` column above comes from the fully tuned E1 run and must not be
+    differenced against a grid number. The gap under grid blocking is not
+    measured anywhere in this prototype and must not be quoted.
 - **Prediction interval**: split-conformal, calibrated on held-out spatial
   blocks and scored on test blocks never seen. Nominal **90 %** →
   **measured empirical coverage 0.824** (SD 0.076) under spatial CV, mean width
@@ -229,10 +253,12 @@ be done before any of this is claimed about soils.
   partition across seeds, which makes `R²_random − R²_spatial` a paired
   comparison; the cost is that a spatial cell's SD across seeds measures learner
   randomness only and is exactly 0.000 for deterministic models (ridge, PLS).
-  The uncertainty that hides is measured instead in
-  `results.partition_sensitivity` (where the boundaries fall) and
-  `results.block_sensitivity` (how many blocks). `results.json` records this
-  explanation in `validation.spatial_partition_note`.
+  Redrawing the k-means partition does not escape this, because the k-means seed
+  turns out not to move any boundary (5 seeds → 1 distinct partition). The
+  uncertainty that hides is measured instead in
+  `results.partition_sensitivity` (where the boundaries fall, family
+  `grid_offset`) and `results.block_sensitivity` (how many blocks). `results.json`
+  records this explanation in `validation.spatial_partition_note`.
 - **No hard-coded numbers.** The API and the web page read `results.json`; the
   noise series plotted in the demo is discovered from whatever the run actually
   swept. If a cell fails, the run prints `!! FAILED cell …` and leaves the
@@ -274,6 +300,13 @@ asserts same-seed → same metrics). Parallel grid search affects wall-clock onl
 - **Lab-to-lab bias is under-represented.** Replicate records from a second lab
   are collapsed rather than modelled, so measurement error is understated
   relative to a real field sensor.
+- **The spatial score depends on the blocking scheme, and one scheme is
+  reported.** Rotated rectangular blocks gave spatial R² 0.03–0.07 *higher* than
+  the k-means blocks used for the headline, and moving the rectangular boundaries
+  from seed to seed costs ±0.034 R² (random forest). The headline is one
+  defensible choice, not a scheme-averaged estimate; `results.partition_sensitivity`
+  and `results.block_sensitivity` hold the spread and should be quoted beside any
+  spatial number.
 - **The interval is marginal.** One width for all inputs, not conditional on the
   feature values, and its measured coverage (0.824) is below its nominal level
   (0.90) under spatial CV.
@@ -297,3 +330,7 @@ asserts same-seed → same metrics). Parallel grid search affects wall-clock onl
    and check whether the blocking is actually holding out distinct regions.
 4. The empirical coverage of the interval, and whether the break-even noise
    level falls inside 0–100 % of feature SD once real sensor error is measured.
+5. The two partition families again: on real coordinates the k-means blocking may
+   become seed-sensitive (the stand-in's compact country clusters are why it was
+   not), and the rectangular family may no longer score above it. Both are
+   printed by `[E4b]` and written to `results.json`, so nothing has to be assumed.
