@@ -200,18 +200,24 @@ function partitionNote(){
  var el2=document.getElementById("partnote");if(!el2)return;
  var ps=(R.results.partition_sensitivity||[]);
  if(!ps.length){el2.textContent="";return}
- var moved=ps.some(function(p){return p.r2_sd>0});
- el2.textContent="The model table above holds ONE block partition fixed, so its SD across "
-  +"seeds is learner randomness only (0.000 for deterministic models). Redrawing the "
-  +"partition itself ("+ps[0].n_partitions+" blocking seeds, "+ps[0].distinct_partitions+
-  " distinct partitions, one learner seed): "
-  +ps.map(function(p){return p.model.replace(/_/g," ")+" R2 "+fmt(p.r2_mean,3)
-   +(p.r2_sd!==null?" +/- "+fmt(p.r2_sd,3)+" [range "+fmt(p.r2_min,3)+"-"
-   +fmt(p.r2_max,3)+"]":"")}).join("; ")
-  +(moved?". That spread is the uncertainty of where the block boundaries fall."
-        :". R2 did not move when the boundaries moved, so boundary placement is not what "
-        +"drives the spatial estimate here - the block COUNT is (chart above), and the "
-        +"random-vs-spatial difference is.");
+ var moved=ps.some(function(p){return (p.r2_sd||0)>0});
+ var head="The model table above holds ONE block partition fixed, so its SD across seeds "
+  +"is learner randomness only (0.000 for deterministic models). Partitions redrawn two "
+  +"ways with the learner seed held constant - 'kmeans seed' varies the reported blocking "
+  +"scheme's seed, 'grid offset' rotates and shifts a rectangular grid so the boundaries "
+  +"really move: ";
+ var body=ps.map(function(p){return p.method.replace(/_/g," ")+" ("+p.model.replace(/_/g," ")
+  +") R2 "+fmt(p.r2_mean,3)+" +/- "+fmt(p.r2_sd||0,3)+" [range "+fmt(p.r2_min,3)+"-"
+  +fmt(p.r2_max,3)+"; "+p.distinct_partitions+" of "+p.n_partitions+" seeds gave a "
+  +"differently placed partition]"}).join("; ");
+ var tail=moved
+  ?". Boundary placement moves the spatial score by about that much, which is the honest "
+  +"uncertainty of the spatial estimate. Where a family reports 0.000, its seeds changed "
+  +"neither the blocks nor the score."
+  :". No redraw moved the score, so the spatial estimate is insensitive to boundary "
+  +"placement in this data. That is a measured null, not a claim of certainty: the block "
+  +"COUNT does move it (chart above), and so does the choice of split scheme (table above).";
+ el2.textContent=head+body+tail;
 }
 
 function form(){

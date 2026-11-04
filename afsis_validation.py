@@ -44,9 +44,9 @@ NOISE_LEVELS = [0.0, 0.1, 0.25, 0.5, 1.0]      # fraction of each feature's SD
 BLOCK_SIZES = [5, 10, 20, 50]
 ARMS = ("train_clean", "train_noisy")           # clean-train/noisy-test vs noisy/noisy
 NOMINAL_COVERAGE = 0.90
-# 3x3 = up to 9 cells: more than FOLDS so GroupKFold has enough groups, and
-# comparable in size to the reported 10 spatial blocks.
-GRID_CELLS_SIDE = 3
+# Deliberately no hard-coded grid grain: grid_resolution() picks one from the
+# data.  A fixed 3x3 gave only 3-4 non-empty cells on clustered coordinates, and
+# GroupKFold then failed with "number of splits greater than number of groups".
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +125,19 @@ def grid_groups(coords: np.ndarray, ids: np.ndarray, cells_per_side: int, seed: 
                 cluster_sizes={int(k): int(v) for k, v in
                                zip(*np.unique(row_groups, return_counts=True))})
     return row_groups, diag
+
+
+def grid_resolution(coords, ids, target_groups: int, seeds, cap: int = 14) -> int:
+    """
+    Smallest square-grid resolution that gives at least `target_groups` non-empty
+    cells for EVERY seed, so the partitions being compared all have the same
+    grain and GroupKFold always has enough groups.  Returns cap if none is.
+    """
+    for side in range(2, cap + 1):
+        if all(len(np.unique(grid_groups(coords, ids, side, s)[0])) >= target_groups
+               for s in seeds):
+            return side
+    return cap
 
 
 # ---------------------------------------------------------------------------
@@ -390,6 +403,7 @@ def sweep(X, y, row_groups, specs, schemes, seeds, log_target, params_by_key,
     `params_by_key` supplies fixed hyperparameters when tune=False.
     """
     rows = []
+    extra = dict(extra or {})
     for name, spec in specs.items():
         for scheme in schemes:
             for level in noise_levels:
@@ -401,7 +415,7 @@ def sweep(X, y, row_groups, specs, schemes, seeds, log_target, params_by_key,
                             r = run_cv(X, y, row_groups, spec, scheme, seed, log_target,
                                        params=params, tune=tune, noise_level=level, arm=arm)
                         except Exception as ex:                       # never fake a number
-                            rows.append(dict(experiment=label, model=name, cv=scheme,
+                            rows.append(dict(extra, experiment=label, model=name, cv=scheme,
                                              noise=level, arm=arm, seed=seed,
                                              error=f"{type(ex).__name__}: {ex}"))
                             continue

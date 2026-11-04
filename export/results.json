@@ -1,9 +1,9 @@
 {
  "schema_version": 2,
- "generated_at_utc": "2026-11-04T12:29:19+00:00",
- "runtime_seconds": 364.6,
+ "generated_at_utc": "2026-11-04T12:53:19+00:00",
+ "runtime_seconds": 435.7,
  "command": "python afsis_experiment.py",
- "git_commit": "79404ea",
+ "git_commit": "a844e94",
  "package_versions": {
   "scikit-learn": "1.8.0",
   "numpy": "2.3.3",
@@ -843,7 +843,7 @@
    20,
    50
   ],
-  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The two uncertainties the fixed partition hides are reported separately: where the block boundaries fall (results.partition_sensitivity, blocks redrawn at a constant learner seed) and how many blocks are used (results.block_sensitivity).",
+  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The two uncertainties the fixed partition hides are reported separately: where the block boundaries fall (results.partition_sensitivity, methods kmeans_seed and grid_offset) and how many blocks are used (results.block_sensitivity). Family kmeans_seed: 5 KMeans seeds at 10 blocks (partitions compared up to cluster renumbering, which is arbitrary) gave 1 distinct partition, so the reported k-means blocking is insensitive to its own seed and the 0.000 SD of the main table is a MEASURED NULL (the estimate did not move), not evidence that fold placement cannot matter. Family grid_offset: boundaries redrawn with a random rotation and grid origin at a 7x7 grain, 5 seed run(s) -> 5 distinct partition(s); spread: random forest R2 0.676 +/- 0.034; ridge R2 0.496 +/- 0.022. Both families are in results.partition_sensitivity (per-partition rows in results.partition_rows, learner seed held constant), and the effect of the block COUNT is in results.block_sensitivity.",
   "experiment_scope": {
    "quick": false,
    "main_tune": true,
@@ -862,6 +862,12 @@
     "random_forest",
     "ridge"
    ],
+   "partition_methods": [
+    "kmeans_seed",
+    "grid_offset"
+   ],
+   "grid_target_groups": 10,
+   "grid_cells_side": 7,
    "grid_jobs": {
     "random_forest": 4,
     "gradient_boosting": 4
@@ -2999,7 +3005,7 @@
   "partition_sensitivity": [
    {
     "model": "random_forest",
-    "blocks": 10,
+    "method": "kmeans_seed",
     "n_partitions": 5,
     "partition_seeds": [
      20261104,
@@ -3008,17 +3014,38 @@
      20261107,
      20261108
     ],
-    "distinct_partitions": 5,
+    "distinct_partitions": 1,
     "learner_seed": 20261104,
+    "blocks": 10,
     "r2_mean": 0.607789737294736,
     "r2_sd": 0.0,
     "r2_min": 0.607789737294736,
     "r2_max": 0.607789737294736,
-    "note": "only the KMeans partition was redrawn here (5 blocking seeds produced 5 distinct partition(s)); same block count, same learner seed and the fixed parameters from E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD means the spatial R2 did not move when the boundaries moved - it does NOT mean the estimate is certain; the block count itself matters, see block_sensitivity."
+    "note": "only the partition varied here: same learner seed and the fixed parameters chosen in E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD with 1 distinct partition(s) means the spatial R2 did not move when the boundaries moved."
    },
    {
     "model": "ridge",
+    "method": "kmeans_seed",
+    "n_partitions": 5,
+    "partition_seeds": [
+     20261104,
+     20261105,
+     20261106,
+     20261107,
+     20261108
+    ],
+    "distinct_partitions": 1,
+    "learner_seed": 20261104,
     "blocks": 10,
+    "r2_mean": 0.4574152652224529,
+    "r2_sd": 0.0,
+    "r2_min": 0.4574152652224529,
+    "r2_max": 0.4574152652224529,
+    "note": "only the partition varied here: same learner seed and the fixed parameters chosen in E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD with 1 distinct partition(s) means the spatial R2 did not move when the boundaries moved."
+   },
+   {
+    "model": "random_forest",
+    "method": "grid_offset",
     "n_partitions": 5,
     "partition_seeds": [
      20261104,
@@ -3029,11 +3056,32 @@
     ],
     "distinct_partitions": 5,
     "learner_seed": 20261104,
-    "r2_mean": 0.4574152652224529,
-    "r2_sd": 0.0,
-    "r2_min": 0.4574152652224529,
-    "r2_max": 0.4574152652224529,
-    "note": "only the KMeans partition was redrawn here (5 blocking seeds produced 5 distinct partition(s)); same block count, same learner seed and the fixed parameters from E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD means the spatial R2 did not move when the boundaries moved - it does NOT mean the estimate is certain; the block count itself matters, see block_sensitivity."
+    "blocks": null,
+    "r2_mean": 0.6759612233599939,
+    "r2_sd": 0.03396219867442945,
+    "r2_min": 0.6443593468514723,
+    "r2_max": 0.7293098547477856,
+    "note": "only the partition varied here: same learner seed and the fixed parameters chosen in E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD with 5 distinct partition(s) means the spatial R2 did not move when the boundaries moved."
+   },
+   {
+    "model": "ridge",
+    "method": "grid_offset",
+    "n_partitions": 5,
+    "partition_seeds": [
+     20261104,
+     20261105,
+     20261106,
+     20261107,
+     20261108
+    ],
+    "distinct_partitions": 5,
+    "learner_seed": 20261104,
+    "blocks": null,
+    "r2_mean": 0.496452808573334,
+    "r2_sd": 0.022100070060141166,
+    "r2_min": 0.47797120698509343,
+    "r2_max": 0.5343041104666985,
+    "note": "only the partition varied here: same learner seed and the fixed parameters chosen in E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD with 5 distinct partition(s) means the spatial R2 did not move when the boundaries moved."
    }
   ],
   "partition_rows": [
@@ -3246,6 +3294,226 @@
     ],
     "block_seed": 20261108,
     "blocks": 10
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.6886968105984438,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.6517726326028571,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.515504744069188,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.5624699893134837,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261104,
+    "blocks": 11,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.5343041104666985,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.7971784281543959,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5747226112117886,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.0950740159481507,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261104,
+    "blocks": 11,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.7293098547477856,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.6077718180918469,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.4843073802515548,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.7479849528795866,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261105,
+    "blocks": 10,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.484349211620388,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.8388458857125158,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5851138732386116,
+    "mae_sd": 0.0,
+    "rpiq_mean": 1.9910067383617678,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261105,
+    "blocks": 10,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.6443593468514723,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.6966426113927571,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5437480803211554,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.3974241362606787,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261106,
+    "blocks": 13,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.47797120698509343,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.8440177197943409,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.594767986052084,
+    "mae_sd": 0.0,
+    "rpiq_mean": 1.9788065721032777,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261106,
+    "blocks": 13,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.6562444166125243,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.6849032328774692,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5394561547425604,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.4385164658719867,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261107,
+    "blocks": 10,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.4946178873432765,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.8304514907342134,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5862715006078665,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.0111322931385964,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261107,
+    "blocks": 10,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.6611956879897436,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.6799528528318317,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5323807346473496,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.4562700251126546,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261108,
+    "blocks": 12,
+    "cells_per_side": 7
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "n_seeds": 1,
+    "r2_mean": 0.4910216264512135,
+    "r2_sd": 0.0,
+    "rmse_mean": 0.8334009679722136,
+    "rmse_sd": 0.0,
+    "mae_mean": 0.5867205263199277,
+    "mae_sd": 0.0,
+    "rpiq_mean": 2.0040147241061863,
+    "rpiq_sd": 0.0,
+    "tuned_params": [
+     []
+    ],
+    "block_seed": 20261108,
+    "blocks": 12,
+    "cells_per_side": 7
    }
   ],
   "baseline_rmse": {

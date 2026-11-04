@@ -18,9 +18,9 @@
  "training_data_version": "afsis-3f-296718c140e3",
  "training_data_sha256": "296718c140e3938b92a08efd79de75753122c1980ca408496cda06567f280628",
  "n_rows": 407,
- "results_sha256": "7afbb792ad1765d95c256f35d9df656573ef693fec1e2ed8c5321678d29bde41",
+ "results_sha256": "11bf9947e11d275ddf169d121edb2b8da2002428f879f5252e49a7f0eeca4dc5",
  "model_params": null,
  "model_seed": 20261104,
  "sklearn_version": "1.8.0",
- "fitted_at_utc": "2026-11-04T12:22:11+00:00"
+ "fitted_at_utc": "2026-11-04T12:36:48+00:00"
 }

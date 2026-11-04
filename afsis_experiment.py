@@ -321,6 +321,9 @@ def main(argv=None):
                 noise_scheme="spatial",
                 control_seeds=len(ctrl_seeds), block_seeds=len(block_seeds),
                 partition_seeds=len(part_seeds), partition_models=list(part_models),
+                partition_methods=["kmeans_seed", "grid_offset"],
+                grid_target_groups=max(V.FOLDS + 1, int(a.blocks)),
+                grid_cells_side=None,   # filled in by grid_resolution() during E4b
                 grid_jobs=dict(random_forest=specs["random_forest"].grid_jobs,
                                gradient_boosting=specs["gradient_boosting"].grid_jobs),
                 note=("Parallelism affects wall-clock only: every grid candidate is a "
@@ -414,9 +417,23 @@ def main(argv=None):
                                  tune=False, label="partition_sensitivity",
                                  extra=dict(block_seed=int(pb), blocks=int(dg["blocks"]))))
     n_km = len(sig_counts)
-    sig_grid = {}
+    # The grid family needs its grain chosen from the DATA, not from a constant:
+    # every partition must leave at least FOLDS + 1 non-empty cells so GroupKFold
+    # has enough groups for every seed, and the grain should be comparable to the
+    # reported --blocks.  grid_resolution() finds the smallest square grid that
+    # works for ALL seeds, so the partitions being compared share one grain.
+    gside = V.grid_resolution(coords, ids, max(V.FOLDS + 1, int(a.blocks)), part_seeds)
+    plan["grid_cells_side"] = int(gside)
+    print(f"  grid grain resolved from the data: {gside}x{gside} cells "
+          f"(target >= {max(V.FOLDS + 1, int(a.blocks))} groups per partition)")
+    sig_grid, grid_skipped = {}, []
     for pb in part_seeds:
-        gg, gdg = V.grid_groups(coords, ids, V.GRID_CELLS_SIDE, pb)
+        gg, gdg = V.grid_groups(coords, ids, gside, pb)
+        n_cells = len(np.unique(gg))
+        if n_cells < V.FOLDS + 1:
+            # Honest skip: recorded in the finding rather than hidden.
+            grid_skipped.append((int(pb), int(n_cells)))
+            continue
         sig_grid.setdefault(V.partition_signature(gg), []).append(int(pb))
         grid_rows.extend(V.sweep(X0, y, gg, {k: specs[k] for k in part_models},
                                  ["spatial"], [seeds[0]], log_target, params_by_key,
@@ -431,15 +448,36 @@ def main(argv=None):
                             int(seeds[0]), n_km, int(a.blocks))
     part_summary += _spread(grid_rows, part_models, "grid_offset",
                             int(seeds[0]), len(sig_grid), None)
+    # The wording is built from what the two families did, so it cannot claim a
+    # varied estimate when the partitions never changed.
+    km_read = (
+        "gave 1 distinct partition, so the reported k-means blocking is insensitive "
+        "to its own seed and the 0.000 SD of the main table is a MEASURED NULL "
+        "(the estimate did not move), not evidence that fold placement cannot matter"
+        if n_km == 1 else
+        f"gave {n_km} distinct partition(s), so part of the spatial-score spread is "
+        f"fold-placement uncertainty"
+    )
+    gr = [p for p in part_summary if p["method"] == "grid_offset"]
+    gr_txt = "; ".join(
+        f"{p['model'].replace('_', ' ')} R2 {p['r2_mean']:.3f}"
+        + (f" +/- {p['r2_sd']:.3f}" if p.get("r2_sd") else "")
+        for p in gr)
+    skip_txt = ("" if not grid_skipped else
+                " [skipped: " + ", ".join(f"seed {s} -> only {n} cells"
+                                          for s, n in grid_skipped)
+                + f", below the {V.FOLDS + 1} groups needed]")
     partition_finding = (
-        f"{len(part_seeds)} KMeans seeds produced {n_km} distinct partition(s) "
-        f"(compared up to cluster renumbering), so the reported k-means blocking "
-        f"is insensitive to its own seed and its SD of 0.000 is a measured null "
-        f"rather than a varied estimate. Redrawing boundaries with a random "
-        f"rotation and grid origin gave "
-        f"{len(sig_grid)} distinct partition(s); that spread is reported as "
-        f"results.boundary_sensitivity, together with the effect of the block "
-        f"count in results.block_sensitivity.")
+        f"Family kmeans_seed: {len(part_seeds)} KMeans seeds at {a.blocks} blocks "
+        f"(partitions compared up to cluster renumbering, which is arbitrary) "
+        f"{km_read}. Family grid_offset: boundaries redrawn with a random rotation "
+        f"and grid origin at a {gside}x{gside} grain, {len(part_seeds) - len(grid_skipped)} "
+        f"seed run(s) -> {len(sig_grid)} distinct partition(s){skip_txt}; spread: "
+        f"{gr_txt or 'not estimable'}. Both families are in "
+        f"results.partition_sensitivity (per-partition rows in "
+        f"results.partition_rows, learner seed held constant), and the effect of "
+        f"the block COUNT is in results.block_sensitivity.")
+    print(f"  finding: {partition_finding}")
 
     # ---------- 6. conformal interval under spatial CV --------------------
     best = max((r for r in gap_rows if r["model"] != "mean_baseline"),

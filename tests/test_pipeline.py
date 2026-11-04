@@ -207,8 +207,9 @@ class TestDataCard:
 class TestUncertaintyReporting:
     def test_partition_uncertainty_is_measured_not_assumed(self, meta):
         ps = meta["results"]["partition_sensitivity"]
-        assert ps, "spatial CV SDs are zero by design, so partition uncertainty must be run"
         scope = meta["validation"]["experiment_scope"]
+        assert ps, "spatial CV SDs are zero by design, so partition uncertainty must be run"
+        assert {p["method"] for p in ps} == set(scope["partition_methods"])
         assert {p["model"] for p in ps} == set(scope["partition_models"])
         for p in ps:
             assert p["n_partitions"] == len(p["partition_seeds"]) == scope["partition_seeds"]
@@ -221,29 +222,84 @@ class TestUncertaintyReporting:
                 assert isinstance(p["r2_sd"], float) and p["r2_sd"] >= 0.0
             else:
                 assert p["r2_sd"] is None, "an SD from one partition would be invented"
+            if p["distinct_partitions"] == 1:
+                # a family that never produced a second partition cannot be quoted
+                # as an uncertainty estimate, and must not show a made-up spread
+                assert p["r2_sd"] in (0.0, None)
 
-    def test_each_partition_row_carries_the_seed_that_built_it(self, meta):
+    def test_the_grid_family_actually_moves_the_boundaries(self, meta):
+        grid = [p for p in meta["results"]["partition_sensitivity"]
+                if p["method"] == "grid_offset"]
+        assert grid, "no boundary-placement check was run"
+        assert all(p["distinct_partitions"] > 1 for p in grid), \
+            "grid offsets produced the same partition, so this run measured nothing"
+
+    def test_partition_rows_are_labelled_by_method(self, meta):
         rows = meta["results"]["partition_rows"]
-        seeds = sorted({r["block_seed"] for r in rows})
+        assert {r["experiment"] for r in rows} == {"partition_sensitivity",
+                                                  "boundary_sensitivity"}
+        assert all(r["cv"] == "spatial" for r in rows)
+        seeds = {r["block_seed"] for r in rows}
         assert len(seeds) == meta["validation"]["experiment_scope"]["partition_seeds"]
-        assert all(r["cv"] == "spatial" and r["experiment"] == "partition_sensitivity"
-                   for r in rows)
 
     def test_zero_sd_is_explained_in_the_record(self, meta):
         note = meta["validation"]["spatial_partition_note"]
         assert "partition_sensitivity" in note
+        assert "distinct partition" in note     # says what the redraws actually produced
         zero = [r for r in meta["results"]["main"] if r["cv"] == "spatial"
                 and r["n_seeds"] > 1 and r["r2_sd"] == 0.0]
         if zero:                      # the reason must travel with the number
-            assert "0.000" in note or "learner randomness" in note
+            assert "learner randomness" in note
 
-    def test_a_different_blocking_seed_can_move_the_blocks(self, pipeline_inputs):
+    def test_kmeans_blocking_is_stable_under_its_own_seed(self, pipeline_inputs):
+        """
+        Measured, not assumed: several KMeans seeds renumber the clusters but do
+        not move them, which is why the k-means partition check has to report a
+        null.  If a future dataset makes this fail, the blocking has become
+        seed-sensitive - good news, and this test should then be updated.
+        """
         p = pipeline_inputs
-        g0, d0 = V.spatial_groups(p["coords"], p["ids"], 6, 0)
-        g1, d1 = V.spatial_groups(p["coords"], p["ids"], 6, 987654321)
-        assert d0["blocks"] == d1["blocks"] >= 2
-        assert len(np.unique(g0)) == len(np.unique(g1)) == d0["blocks"]
-        assert not np.array_equal(g0, g1), "the blocking seed had no effect at all"
+        sigs = {V.partition_signature(V.spatial_groups(p["coords"], p["ids"], 6, s)[0])
+                for s in (0, 1, 7, 987654321)}
+        assert len(sigs) == 1
+
+    def test_grid_blocking_does_move_the_boundaries(self, pipeline_inputs):
+        p = pipeline_inputs
+        sigs = {V.partition_signature(V.grid_groups(p["coords"], p["ids"], 3, s)[0])
+                for s in (0, 1, 7)}
+        assert len(sigs) == 3, "grid blocking is the family that must vary the boundaries"
+
+    def test_partition_signature_ignores_cluster_renumbering(self):
+        a = np.array([0, 0, 1, 1, 2, 2])
+        b = np.array([2, 2, 0, 0, 1, 1])       # same blocks, other labels
+        c = np.array([0, 0, 1, 1, 1, 2])
+        assert V.partition_signature(a) == V.partition_signature(b)
+        assert V.partition_signature(a) != V.partition_signature(c)
+
+    def test_grid_groups_keep_a_site_in_one_cell(self, dup_pipeline_inputs):
+        p = dup_pipeline_inputs
+        gg, dg = V.grid_groups(p["coords"], p["ids"], 3, 0)
+        assert len(gg) == len(p["y"]) and dg["blocks"] >= 2
+        seen = {}
+        for g, i in zip(gg, p["ids"]):
+            # site ids are strings in AfSIS (TIN/SSN-like), so do not cast them
+            assert seen.setdefault(str(i), int(g)) == int(g), \
+                "one site was split across two blocks"
+
+    def test_grid_resolution_leaves_kfold_enough_groups(self, pipeline_inputs):
+        """
+        Guards the crash found during development: a fixed 3x3 grid left only 3-4
+        non-empty cells on clustered coordinates, and GroupKFold(5) then raised
+        "number of splits greater than the number of groups".  The resolution is
+        chosen from the data, so EVERY seed must clear the target on its own.
+        """
+        p = pipeline_inputs
+        seeds, want = (0, 1, 7, 987654321), V.FOLDS + 1
+        side = V.grid_resolution(p["coords"], p["ids"], want, seeds)
+        counts = [len(np.unique(V.grid_groups(p["coords"], p["ids"], side, s)[0]))
+                  for s in seeds]
+        assert all(c >= want for c in counts), f"{side}x{side} grid gave {counts} cells"
+        assert side >= 2
 
 
 # ---------------------------------------------------------------------------

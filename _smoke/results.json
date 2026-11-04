@@ -1,9 +1,9 @@
 {
  "schema_version": 2,
- "generated_at_utc": "2026-11-04T12:22:11+00:00",
- "runtime_seconds": 71.8,
+ "generated_at_utc": "2026-11-04T12:36:48+00:00",
+ "runtime_seconds": 75.1,
  "command": "python afsis_experiment.py --quick --seeds 3 --blocks 6 --export _smoke --out _smoke/results",
- "git_commit": "fee444f",
+ "git_commit": "a844e94",
  "package_versions": {
   "scikit-learn": "1.8.0",
   "numpy": "2.3.3",
@@ -832,7 +832,7 @@
    5,
    10
   ],
-  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The uncertainty of where the block boundaries fall is reported separately in results.partition_sensitivity and results.block_sensitivity, not hidden inside the 0.000.",
+  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The two uncertainties the fixed partition hides are reported separately: where the block boundaries fall (results.partition_sensitivity, methods kmeans_seed and grid_offset) and how many blocks are used (results.block_sensitivity). 2 KMeans seeds produced 1 distinct partition(s) (compared up to cluster renumbering), so the reported k-means blocking is insensitive to its own seed and its SD of 0.000 is a measured null rather than a varied estimate. Redrawing boundaries with a random rotation and grid origin gave 2 distinct partition(s); that spread is reported as results.boundary_sensitivity, together with the effect of the block count in results.block_sensitivity.",
   "experiment_scope": {
    "quick": true,
    "main_tune": false,
@@ -850,6 +850,11 @@
     "random_forest",
     "ridge"
    ],
+   "partition_methods": [
+    "kmeans_seed",
+    "grid_offset"
+   ],
+   "grid_cells_side": 3,
    "grid_jobs": {
     "random_forest": 4,
     "gradient_boosting": 4
@@ -1538,35 +1543,37 @@
   "partition_sensitivity": [
    {
     "model": "random_forest",
-    "blocks": 6,
+    "method": "kmeans_seed",
     "n_partitions": 2,
     "partition_seeds": [
      20261104,
      20261105
     ],
-    "distinct_partitions": 2,
+    "distinct_partitions": 1,
     "learner_seed": 20261104,
+    "blocks": 6,
     "r2_mean": 0.6219472027843493,
     "r2_sd": 0.0,
     "r2_min": 0.6219472027843493,
     "r2_max": 0.6219472027843493,
-    "note": "same block count and same learner seed as each other; only the KMeans partition was redrawn (2 blocking seeds produced 2 distinct partition(s)). Fixed parameters from E1, so no tuning variance. A 0.000 SD here means the partition is stable, NOT that the estimate is certain - see block_sensitivity for the effect of changing the block count."
+    "note": "only the partition varied here: same learner seed and the fixed parameters chosen in E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD with 1 distinct partition(s) means the spatial R2 did not move when the boundaries moved."
    },
    {
     "model": "ridge",
-    "blocks": 6,
+    "method": "kmeans_seed",
     "n_partitions": 2,
     "partition_seeds": [
      20261104,
      20261105
     ],
-    "distinct_partitions": 2,
+    "distinct_partitions": 1,
     "learner_seed": 20261104,
+    "blocks": 6,
     "r2_mean": 0.460768450333626,
     "r2_sd": 0.0,
     "r2_min": 0.460768450333626,
     "r2_max": 0.460768450333626,
-    "note": "same block count and same learner seed as each other; only the KMeans partition was redrawn (2 blocking seeds produced 2 distinct partition(s)). Fixed parameters from E1, so no tuning variance. A 0.000 SD here means the partition is stable, NOT that the estimate is certain - see block_sensitivity for the effect of changing the block count."
+    "note": "only the partition varied here: same learner seed and the fixed parameters chosen in E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD with 1 distinct partition(s) means the spatial R2 did not move when the boundaries moved."
    }
   ],
   "partition_rows": [
@@ -1653,6 +1660,42 @@
     ],
     "block_seed": 20261105,
     "blocks": 6
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "seed": 20261104,
+    "error": "ValueError: Cannot have number of splits n_splits=5 greater than the number of groups: 3."
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "seed": 20261104,
+    "error": "ValueError: Cannot have number of splits n_splits=5 greater than the number of groups: 3."
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "random_forest",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "seed": 20261104,
+    "error": "ValueError: Cannot have number of splits n_splits=5 greater than the number of groups: 4."
+   },
+   {
+    "experiment": "boundary_sensitivity",
+    "model": "ridge",
+    "cv": "spatial",
+    "noise": 0.0,
+    "arm": "train_clean",
+    "seed": 20261104,
+    "error": "ValueError: Cannot have number of splits n_splits=5 greater than the number of groups: 4."
    }
   ],
   "baseline_rmse": {
