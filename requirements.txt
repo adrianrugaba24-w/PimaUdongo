@@ -4,4 +4,7 @@ scikit-learn
 matplotlib
 joblib
 fastapi
-uvicorn
+uvicorn[standard]
+pydantic
+pytest
+httpx
