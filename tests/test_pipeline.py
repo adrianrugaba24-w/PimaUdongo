@@ -201,6 +201,48 @@ class TestDataCard:
 
 
 # ---------------------------------------------------------------------------
+# 5a.  Uncertainty reporting: a 0.000 SD must never be an unexplained zero
+# ---------------------------------------------------------------------------
+
+class TestUncertaintyReporting:
+    def test_partition_uncertainty_is_measured_not_assumed(self, meta):
+        ps = meta["results"]["partition_sensitivity"]
+        assert ps, "spatial CV SDs are zero by design, so partition uncertainty must be run"
+        scope = meta["validation"]["experiment_scope"]
+        assert {p["model"] for p in ps} == set(scope["partition_models"])
+        for p in ps:
+            assert p["n_partitions"] == len(p["partition_seeds"]) == scope["partition_seeds"]
+            assert p["r2_min"] <= p["r2_mean"] <= p["r2_max"]
+            if p["n_partitions"] > 1:
+                assert isinstance(p["r2_sd"], float) and p["r2_sd"] >= 0.0
+            else:
+                assert p["r2_sd"] is None, "an SD from one partition would be invented"
+
+    def test_each_partition_row_carries_the_seed_that_built_it(self, meta):
+        rows = meta["results"]["partition_rows"]
+        seeds = sorted({r["block_seed"] for r in rows})
+        assert len(seeds) == meta["validation"]["experiment_scope"]["partition_seeds"]
+        assert all(r["cv"] == "spatial" and r["experiment"] == "partition_sensitivity"
+                   for r in rows)
+
+    def test_zero_sd_is_explained_in_the_record(self, meta):
+        note = meta["validation"]["spatial_partition_note"]
+        assert "partition_sensitivity" in note
+        zero = [r for r in meta["results"]["main"] if r["cv"] == "spatial"
+                and r["n_seeds"] > 1 and r["r2_sd"] == 0.0]
+        if zero:                      # the reason must travel with the number
+            assert "0.000" in note or "learner randomness" in note
+
+    def test_a_different_blocking_seed_can_move_the_blocks(self, pipeline_inputs):
+        p = pipeline_inputs
+        g0, d0 = V.spatial_groups(p["coords"], p["ids"], 6, 0)
+        g1, d1 = V.spatial_groups(p["coords"], p["ids"], 6, 987654321)
+        assert d0["blocks"] == d1["blocks"] >= 2
+        assert len(np.unique(g0)) == len(np.unique(g1)) == d0["blocks"]
+        assert not np.array_equal(g0, g1), "the blocking seed had no effect at all"
+
+
+# ---------------------------------------------------------------------------
 # 5b.  Data labelling: a stand-in may never be reported as real AfSIS data
 # ---------------------------------------------------------------------------
 
