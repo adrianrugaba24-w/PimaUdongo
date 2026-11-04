@@ -293,7 +293,12 @@ def model_info():
             "n_seeds": v.get("n_seeds"), "blocks": v.get("blocks"),
             "spatial_grouping": v.get("spatial_grouping"),
             "tuning": v.get("tuning"), "metrics": v.get("metrics"),
+            # A spatial-CV SD of 0.000 is a property of the design, not a missing
+            # calculation: say so where the design is described.
+            "spatial_partition_note": v.get("spatial_partition_note"),
+            "experiment_scope": v.get("experiment_scope"),
         },
+        "partition_sensitivity": R.get("results", {}).get("partition_sensitivity", []),
         "metrics": _model_info_metrics(),
         "limitations": R.get("limitations", []),
         "disclaimer": ("Research prototype. Not validated on field sensors or "

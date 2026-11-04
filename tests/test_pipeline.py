@@ -213,6 +213,10 @@ class TestUncertaintyReporting:
         for p in ps:
             assert p["n_partitions"] == len(p["partition_seeds"]) == scope["partition_seeds"]
             assert p["r2_min"] <= p["r2_mean"] <= p["r2_max"]
+            # one learner seed for every redraw, otherwise model randomness is
+            # mixed into what should be a partition-only spread
+            assert p["learner_seed"] == meta["validation"]["seeds"][0]
+            assert 1 <= p["distinct_partitions"] <= p["n_partitions"]
             if p["n_partitions"] > 1:
                 assert isinstance(p["r2_sd"], float) and p["r2_sd"] >= 0.0
             else:

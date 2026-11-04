@@ -187,6 +187,15 @@ class TestHealthAndInfo:
         assert body["limitations"] == meta["limitations"]
         assert len(body["limitations"]) >= 3
 
+    def test_model_info_reports_uncertainty_without_inventing_it(self, client, meta):
+        """The API must relay the design note and the measured partition spread."""
+        body = client.get("/model-info").json()
+        assert body["validation_design"]["spatial_partition_note"] == \
+            meta["validation"]["spatial_partition_note"]
+        assert body["partition_sensitivity"] == meta["results"]["partition_sensitivity"]
+        assert body["validation_design"]["experiment_scope"] == \
+            meta["validation"]["experiment_scope"]
+
     def test_disclaimer_exact(self, client):
         assert client.get("/model-info").json()["disclaimer"] == (
             "Research prototype. Not validated on field sensors or Ugandan farms. "

@@ -284,6 +284,7 @@ def main(argv=None):
     # to say anything about partition uncertainty.
     part_seeds = seeds if not a.quick else seeds[:2]
     part_models = ("random_forest", "ridge")
+    part_summary: list[dict] = []
     plan = dict(quick=bool(a.quick), main_tune=not a.quick, main_seeds=len(seeds),
                 noise_seeds=len(noise_seeds), noise_models=list(noise_models),
                 noise_scheme="spatial",
@@ -368,29 +369,40 @@ def main(argv=None):
     # rebuilding the blocks from other seeds at the reported block count.
     print(f"[E4b] spatial partition sensitivity: {len(part_seeds)} blocking seeds "
           f"at {a.blocks} blocks, models={list(part_models)} ...")
-    part_rows = []
+    part_rows, part_partitions = [], {}
     for pb in part_seeds:
         rg, dg = V.spatial_groups(coords, ids, a.blocks, pb)
+        # Only the PARTITION varies here: the learner keeps one seed, so a spread
+        # in R2 is block-boundary uncertainty and not model randomness as well.
+        part_partitions.setdefault(tuple(int(g) for g in rg), []).append(int(pb))
         part_rows.extend(V.sweep(X0, y, rg, {k: specs[k] for k in part_models},
-                                 ["spatial"], [pb], log_target, params_by_key, tune=False,
-                                 label="partition_sensitivity",
+                                 ["spatial"], [seeds[0]], log_target, params_by_key,
+                                 tune=False, label="partition_sensitivity",
                                  extra=dict(block_seed=int(pb), blocks=int(dg["blocks"]))))
     for e in [r for r in part_rows if "error" in r]:
         print(f"  !! FAILED cell {e['model']}/partition{e['block_seed']}: {e['error']}")
-    part_summary = []
+    n_distinct = len(part_partitions)
     for name in part_models:
-        cells = [(int(r["block_seed"]), r["r2_mean"]) for r in part_rows
-                 if r.get("model") == name and "r2_mean" in r]
+        cells = sorted([(int(r["block_seed"]), r["r2_mean"]) for r in part_rows
+                        if r.get("model") == name and "r2_mean" in r])
         if not cells:
             continue
         vals = np.array([c[1] for c in cells], float)
         part_summary.append(dict(
             model=name, blocks=int(a.blocks), n_partitions=len(vals),
-            partition_seeds=[c[0] for c in cells], r2_mean=float(vals.mean()),
+            partition_seeds=[c[0] for c in cells],
+            distinct_partitions=n_distinct,
+            learner_seed=int(seeds[0]),
+            r2_mean=float(vals.mean()),
             r2_sd=float(vals.std(ddof=1)) if len(vals) > 1 else None,
             r2_min=float(vals.min()), r2_max=float(vals.max()),
-            note=("same block count as E1, partition rebuilt per seed; fixed-parameter "
-                  "models (tuned once in E1), so this isolates partition uncertainty")))
+            note=(f"only the KMeans partition was redrawn here ({len(vals)} blocking "
+                  f"seeds produced {n_distinct} distinct partition(s)); same block "
+                  f"count, same learner seed and the fixed parameters from E1, so no "
+                  f"model-randomness or tuning variance is mixed in. A 0.000 SD means "
+                  f"the spatial R2 did not move when the boundaries moved - it does NOT "
+                  f"mean the estimate is certain; the block count itself matters, see "
+                  f"block_sensitivity.")))
 
     # ---------- 6. conformal interval under spatial CV --------------------
     best = max((r for r in gap_rows if r["model"] != "mean_baseline"),
@@ -512,9 +524,11 @@ def main(argv=None):
                             "scheme, so random-vs-spatial is a paired comparison. The SD "
                             "across seeds of a spatial-CV cell therefore measures learner "
                             "randomness only and is exactly 0.000 for deterministic models "
-                            "(ridge, PLS). The uncertainty of where the block boundaries "
-                            "fall is reported separately in results.partition_sensitivity "
-                            "and results.block_sensitivity, not hidden inside the 0.000."),
+                            "(ridge, PLS). The two uncertainties the fixed partition hides "
+                            "are reported separately: where the block boundaries fall "
+                            "(results.partition_sensitivity, blocks redrawn at a constant "
+                            "learner seed) and how many blocks are used "
+                            "(results.block_sensitivity)."),
                         experiment_scope=plan),
         results=dict(main=[{k: v for k, v in r.items() if k != "per_seed"} for r in main_rows],
                      validation_gap=gap_rows,
@@ -596,8 +610,8 @@ def main(argv=None):
     for p in part_summary:
         sd = f"+/-{p['r2_sd']:.3f}" if p["r2_sd"] is not None else "(single partition)"
         print(f"  partition sensitivity ({p['model']}, {p['n_partitions']} redraws of "
-              f"{p['blocks']} blocks): R2 spatial {p['r2_mean']:.3f} {sd} "
-              f"[range {p['r2_min']:.3f}-{p['r2_max']:.3f}]")
+              f"{p['blocks']} blocks -> {p['distinct_partitions']} distinct): R2 spatial "
+              f"{p['r2_mean']:.3f} {sd} [range {p['r2_min']:.3f}-{p['r2_max']:.3f}]")
     print(f"  wrote {export_dir}/results.json, model.joblib, model_meta.json, "
           f"{out_prefix.name}_summary.csv, _runs.csv, _plot.png in "
           f"{time.time() - t_start:.1f}s")

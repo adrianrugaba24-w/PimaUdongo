@@ -200,13 +200,18 @@ function partitionNote(){
  var el2=document.getElementById("partnote");if(!el2)return;
  var ps=(R.results.partition_sensitivity||[]);
  if(!ps.length){el2.textContent="";return}
- el2.textContent="The block count above is varied, but the model comparison holds ONE "
-  +"partition fixed, so its SD across seeds is learner randomness only (0.000 for ridge "
-  +"and PLS). Redrawing the blocks themselves "
-  +ps.map(function(p){return p.model.replace(/_/g," ")+": R2 "+fmt(p.r2_mean,3)
-   +(p.r2_sd!==null?" +/- "+fmt(p.r2_sd,3)+" over "+p.n_partitions+" redraws "
-   +"(range "+fmt(p.r2_min,3)+" to "+fmt(p.r2_max,3)+")":"")}).join("; ")
-  +". That spread, not the 0.000, is the uncertainty of the spatial estimate.";
+ var moved=ps.some(function(p){return p.r2_sd>0});
+ el2.textContent="The model table above holds ONE block partition fixed, so its SD across "
+  +"seeds is learner randomness only (0.000 for deterministic models). Redrawing the "
+  +"partition itself ("+ps[0].n_partitions+" blocking seeds, "+ps[0].distinct_partitions+
+  " distinct partitions, one learner seed): "
+  +ps.map(function(p){return p.model.replace(/_/g," ")+" R2 "+fmt(p.r2_mean,3)
+   +(p.r2_sd!==null?" +/- "+fmt(p.r2_sd,3)+" [range "+fmt(p.r2_min,3)+"-"
+   +fmt(p.r2_max,3)+"]":"")}).join("; ")
+  +(moved?". That spread is the uncertainty of where the block boundaries fall."
+        :". R2 did not move when the boundaries moved, so boundary placement is not what "
+        +"drives the spatial estimate here - the block COUNT is (chart above), and the "
+        +"random-vs-spatial difference is.");
 }
 
 function form(){
