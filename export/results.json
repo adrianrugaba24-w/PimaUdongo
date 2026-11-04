@@ -1,9 +1,9 @@
 {
  "schema_version": 2,
- "generated_at_utc": "2026-11-04T12:19:27+00:00",
- "runtime_seconds": 395.2,
+ "generated_at_utc": "2026-11-04T12:29:19+00:00",
+ "runtime_seconds": 364.6,
  "command": "python afsis_experiment.py",
- "git_commit": "fee444f",
+ "git_commit": "79404ea",
  "package_versions": {
   "scikit-learn": "1.8.0",
   "numpy": "2.3.3",
@@ -843,7 +843,7 @@
    20,
    50
   ],
-  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The uncertainty of where the block boundaries fall is reported separately in results.partition_sensitivity and results.block_sensitivity, not hidden inside the 0.000.",
+  "spatial_partition_note": "The main comparison builds the spatial partition ONCE (KMeans seeded with --seed0) and reuses it for every model, seed and scheme, so random-vs-spatial is a paired comparison. The SD across seeds of a spatial-CV cell therefore measures learner randomness only and is exactly 0.000 for deterministic models (ridge, PLS). The two uncertainties the fixed partition hides are reported separately: where the block boundaries fall (results.partition_sensitivity, blocks redrawn at a constant learner seed) and how many blocks are used (results.block_sensitivity).",
   "experiment_scope": {
    "quick": false,
    "main_tune": true,
@@ -3008,11 +3008,13 @@
      20261107,
      20261108
     ],
-    "r2_mean": 0.6109341375179842,
-    "r2_sd": 0.002284634825187083,
+    "distinct_partitions": 5,
+    "learner_seed": 20261104,
+    "r2_mean": 0.607789737294736,
+    "r2_sd": 0.0,
     "r2_min": 0.607789737294736,
-    "r2_max": 0.6140482462528103,
-    "note": "same block count as E1, partition rebuilt per seed; fixed-parameter models (tuned once in E1), so this isolates partition uncertainty"
+    "r2_max": 0.607789737294736,
+    "note": "only the KMeans partition was redrawn here (5 blocking seeds produced 5 distinct partition(s)); same block count, same learner seed and the fixed parameters from E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD means the spatial R2 did not move when the boundaries moved - it does NOT mean the estimate is certain; the block count itself matters, see block_sensitivity."
    },
    {
     "model": "ridge",
@@ -3025,11 +3027,13 @@
      20261107,
      20261108
     ],
+    "distinct_partitions": 5,
+    "learner_seed": 20261104,
     "r2_mean": 0.4574152652224529,
     "r2_sd": 0.0,
     "r2_min": 0.4574152652224529,
     "r2_max": 0.4574152652224529,
-    "note": "same block count as E1, partition rebuilt per seed; fixed-parameter models (tuned once in E1), so this isolates partition uncertainty"
+    "note": "only the KMeans partition was redrawn here (5 blocking seeds produced 5 distinct partition(s)); same block count, same learner seed and the fixed parameters from E1, so no model-randomness or tuning variance is mixed in. A 0.000 SD means the spatial R2 did not move when the boundaries moved - it does NOT mean the estimate is certain; the block count itself matters, see block_sensitivity."
    }
   ],
   "partition_rows": [
@@ -3082,13 +3086,13 @@
     "noise": 0.0,
     "arm": "train_clean",
     "n_seeds": 1,
-    "r2_mean": 0.6118365573906923,
+    "r2_mean": 0.607789737294736,
     "r2_sd": 0.0,
-    "rmse_mean": 0.7277993296232153,
+    "rmse_mean": 0.7315833492653234,
     "rmse_sd": 0.0,
-    "mae_mean": 0.5689833611870047,
+    "mae_mean": 0.5774121721674078,
     "mae_sd": 0.0,
-    "rpiq_mean": 2.294791631321379,
+    "rpiq_mean": 2.2829221203269237,
     "rpiq_sd": 0.0,
     "tuned_params": [
      []
@@ -3124,13 +3128,13 @@
     "noise": 0.0,
     "arm": "train_clean",
     "n_seeds": 1,
-    "r2_mean": 0.6102759994917801,
+    "r2_mean": 0.607789737294736,
     "r2_sd": 0.0,
-    "rmse_mean": 0.7292608708223616,
+    "rmse_mean": 0.7315833492653234,
     "rmse_sd": 0.0,
-    "mae_mean": 0.5734048122237709,
+    "mae_mean": 0.5774121721674078,
     "mae_sd": 0.0,
-    "rpiq_mean": 2.2901925466223054,
+    "rpiq_mean": 2.2829221203269237,
     "rpiq_sd": 0.0,
     "tuned_params": [
      []
@@ -3166,13 +3170,13 @@
     "noise": 0.0,
     "arm": "train_clean",
     "n_seeds": 1,
-    "r2_mean": 0.6140482462528103,
+    "r2_mean": 0.607789737294736,
     "r2_sd": 0.0,
-    "rmse_mean": 0.7257229296461138,
+    "rmse_mean": 0.7315833492653234,
     "rmse_sd": 0.0,
-    "mae_mean": 0.5731059426455609,
+    "mae_mean": 0.5774121721674078,
     "mae_sd": 0.0,
-    "rpiq_mean": 2.301357367494345,
+    "rpiq_mean": 2.2829221203269237,
     "rpiq_sd": 0.0,
     "tuned_params": [
      []
@@ -3208,13 +3212,13 @@
     "noise": 0.0,
     "arm": "train_clean",
     "n_seeds": 1,
-    "r2_mean": 0.6107201471599015,
+    "r2_mean": 0.607789737294736,
     "r2_sd": 0.0,
-    "rmse_mean": 0.7288452024901821,
+    "rmse_mean": 0.7315833492653234,
     "rmse_sd": 0.0,
-    "mae_mean": 0.5725587156753051,
+    "mae_mean": 0.5774121721674078,
     "mae_sd": 0.0,
-    "rpiq_mean": 2.2914986682966636,
+    "rpiq_mean": 2.2829221203269237,
     "rpiq_sd": 0.0,
     "tuned_params": [
      []

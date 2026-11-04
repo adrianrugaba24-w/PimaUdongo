@@ -44,6 +44,9 @@ NOISE_LEVELS = [0.0, 0.1, 0.25, 0.5, 1.0]      # fraction of each feature's SD
 BLOCK_SIZES = [5, 10, 20, 50]
 ARMS = ("train_clean", "train_noisy")           # clean-train/noisy-test vs noisy/noisy
 NOMINAL_COVERAGE = 0.90
+# 3x3 = up to 9 cells: more than FOLDS so GroupKFold has enough groups, and
+# comparable in size to the reported 10 spatial blocks.
+GRID_CELLS_SIDE = 3
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +74,56 @@ def spatial_groups(coords: np.ndarray, ids: np.ndarray, blocks: int, seed: int):
                 cluster_sizes={int(k): int(v) for k, v in
                                zip(*np.unique(row_groups, return_counts=True))},
                 cluster_label=site_cluster.tolist())
+    return row_groups, diag
+
+
+def partition_signature(row_groups) -> frozenset:
+    """
+    A partition as a set of row-index sets.
+
+    Cluster labels are arbitrary: two runs that number the same blocks
+    differently have different label arrays and the same partition.  Comparing
+    raw arrays therefore makes a stable partition look like it changed.
+    """
+    g = np.asarray(row_groups)
+    return frozenset(frozenset(np.flatnonzero(g == v).tolist()) for v in np.unique(g))
+
+
+def grid_groups(coords: np.ndarray, ids: np.ndarray, cells_per_side: int, seed: int):
+    """
+    Rectangular-block CV whose boundaries really move with the seed.
+
+    The plane is rotated by a random angle and the grid origin is shifted by a
+    random fraction of a cell, then the bounding box is cut into
+    cells_per_side^2 cells.  KMeans blocking proved insensitive to its own seed
+    (it converges to the same clusters), so this is the partition family that
+    can answer 'how much of the spatial score depends on WHERE the hold-out
+    boundaries fall?'.  One site gets one cell, so no site straddles a border.
+    Returns (row_groups, diagnostics).
+    """
+    coords = np.asarray(coords, float)
+    ids = np.asarray(ids)
+    rng = np.random.default_rng(seed)
+    uniq, first_idx = np.unique(ids, return_index=True)
+    pt = coords[first_idx]
+    theta = float(rng.uniform(0.0, np.pi / 2.0))
+    c, s = np.cos(theta), np.sin(theta)
+    rot = pt @ np.array([[c, -s], [s, c]])
+    lo = rot.min(0)
+    span = rot.max(0) - lo
+    span = np.where(span > 0, span, 1.0)
+    cell = span / cells_per_side
+    idx = np.floor((rot - lo + rng.uniform(0.0, 1.0, 2) * cell) / cell).astype(int)
+    idx = np.clip(idx, 0, cells_per_side - 1)
+    present, site_cell = np.unique(idx[:, 0] * cells_per_side + idx[:, 1],
+                                   return_inverse=True)
+    lookup = dict(zip(uniq.tolist(), site_cell.tolist()))
+    row_groups = np.array([lookup[i] for i in ids.tolist()])
+    diag = dict(blocks=int(len(present)), n_sites=int(len(uniq)),
+                cells_per_side=int(cells_per_side),
+                rotation_deg=float(np.degrees(theta)),
+                cluster_sizes={int(k): int(v) for k, v in
+                               zip(*np.unique(row_groups, return_counts=True))})
     return row_groups, diag
 
 

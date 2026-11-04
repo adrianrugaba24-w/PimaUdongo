@@ -131,6 +131,37 @@ def _mode_params(rows, model, scheme):
     return votes[best_key][1]
 
 
+def _spread(rows, models, method, learner_seed, distinct, blocks):
+    """
+    Mean, SD and range of spatial R2 across the partitions in `rows`.
+
+    One entry per model. `distinct` is the number of genuinely different
+    partitions the blocking seeds produced (compared up to renumbering), so a
+    reader can tell 'the estimate did not move' from 'the partition never moved'.
+    """
+    out = []
+    for name in models:
+        cells = sorted({int(r["block_seed"]): float(r["r2_mean"]) for r in rows
+                        if r.get("model") == name and "r2_mean" in r
+                        and np.isfinite(r["r2_mean"])}.items())
+        if not cells:
+            continue
+        vals = np.array([c[1] for c in cells], float)
+        out.append(dict(
+            model=name, method=method, n_partitions=len(vals),
+            partition_seeds=[int(c[0]) for c in cells],
+            distinct_partitions=int(distinct), learner_seed=int(learner_seed),
+            blocks=blocks, r2_mean=float(vals.mean()),
+            r2_sd=float(vals.std(ddof=1)) if len(vals) > 1 else None,
+            r2_min=float(vals.min()), r2_max=float(vals.max()),
+            note=("only the partition varied here: same learner seed and the "
+                  f"fixed parameters chosen in E1, so no model-randomness or "
+                  f"tuning variance is mixed in. A 0.000 SD with "
+                  f"{distinct} distinct partition(s) means the spatial R2 did "
+                  f"not move when the boundaries moved.")))
+    return out
+
+
 def _tidy(rows: list[dict]) -> pd.DataFrame:
     recs = []
     for r in rows:
@@ -360,49 +391,55 @@ def main(argv=None):
                                                               n_clusters=len(dg["cluster_sizes"])))
         block_rows.extend(rows)
 
-    # ---------- 5b. partition sensitivity ---------------------------------
+    # ---------- 5b. partition / boundary sensitivity ----------------------
     # E1 deliberately uses ONE partition for every model and seed: that is what
     # makes R2_random - R2_spatial a paired comparison.  The price is that the
-    # seed-to-seed SD of the spatial column measures learner randomness only, so
-    # it is exactly 0.000 for deterministic models.  The uncertainty that design
-    # hides - WHERE the block boundaries fall - is measured here instead, by
-    # rebuilding the blocks from other seeds at the reported block count.
-    print(f"[E4b] spatial partition sensitivity: {len(part_seeds)} blocking seeds "
-          f"at {a.blocks} blocks, models={list(part_models)} ...")
-    part_rows, part_partitions = [], {}
+    # seed-to-seed SD of a spatial cell measures learner randomness only, so it
+    # is exactly 0.000 for deterministic models.  Two blocking families are
+    # redrawn here, with the learner seed held constant so nothing but the
+    # partition varies, and partitions are compared up to renumbering
+    # (V.partition_signature) because cluster labels are arbitrary.
+    #   kmeans - the reported blocking, same block count, different KMeans seed
+    #   grid   - random rotation + random grid origin, so the boundaries move
+    part_rows, grid_rows = [], []
+    print(f"[E4b] partition sensitivity: {len(part_seeds)} KMeans seeds at "
+          f"{a.blocks} blocks + {len(part_seeds)} grid-offset partitions, "
+          f"models={list(part_models)} ...")
+    sig_counts = {}
     for pb in part_seeds:
         rg, dg = V.spatial_groups(coords, ids, a.blocks, pb)
-        # Only the PARTITION varies here: the learner keeps one seed, so a spread
-        # in R2 is block-boundary uncertainty and not model randomness as well.
-        part_partitions.setdefault(tuple(int(g) for g in rg), []).append(int(pb))
+        sig_counts.setdefault(V.partition_signature(rg), []).append(int(pb))
         part_rows.extend(V.sweep(X0, y, rg, {k: specs[k] for k in part_models},
                                  ["spatial"], [seeds[0]], log_target, params_by_key,
                                  tune=False, label="partition_sensitivity",
                                  extra=dict(block_seed=int(pb), blocks=int(dg["blocks"]))))
-    for e in [r for r in part_rows if "error" in r]:
-        print(f"  !! FAILED cell {e['model']}/partition{e['block_seed']}: {e['error']}")
-    n_distinct = len(part_partitions)
-    for name in part_models:
-        cells = sorted([(int(r["block_seed"]), r["r2_mean"]) for r in part_rows
-                        if r.get("model") == name and "r2_mean" in r])
-        if not cells:
-            continue
-        vals = np.array([c[1] for c in cells], float)
-        part_summary.append(dict(
-            model=name, blocks=int(a.blocks), n_partitions=len(vals),
-            partition_seeds=[c[0] for c in cells],
-            distinct_partitions=n_distinct,
-            learner_seed=int(seeds[0]),
-            r2_mean=float(vals.mean()),
-            r2_sd=float(vals.std(ddof=1)) if len(vals) > 1 else None,
-            r2_min=float(vals.min()), r2_max=float(vals.max()),
-            note=(f"only the KMeans partition was redrawn here ({len(vals)} blocking "
-                  f"seeds produced {n_distinct} distinct partition(s)); same block "
-                  f"count, same learner seed and the fixed parameters from E1, so no "
-                  f"model-randomness or tuning variance is mixed in. A 0.000 SD means "
-                  f"the spatial R2 did not move when the boundaries moved - it does NOT "
-                  f"mean the estimate is certain; the block count itself matters, see "
-                  f"block_sensitivity.")))
+    n_km = len(sig_counts)
+    sig_grid = {}
+    for pb in part_seeds:
+        gg, gdg = V.grid_groups(coords, ids, V.GRID_CELLS_SIDE, pb)
+        sig_grid.setdefault(V.partition_signature(gg), []).append(int(pb))
+        grid_rows.extend(V.sweep(X0, y, gg, {k: specs[k] for k in part_models},
+                                 ["spatial"], [seeds[0]], log_target, params_by_key,
+                                 tune=False, label="boundary_sensitivity",
+                                 extra=dict(block_seed=int(pb),
+                                            blocks=int(gdg["blocks"]),
+                                            cells_per_side=int(gdg["cells_per_side"]))))
+    for e in [r for r in part_rows + grid_rows if "error" in r]:
+        print(f"  !! FAILED cell {e['model']}/{e.get('experiment')}/"
+              f"partition{e.get('block_seed')}: {e['error']}")
+    part_summary += _spread(part_rows, part_models, "kmeans_seed",
+                            int(seeds[0]), n_km, int(a.blocks))
+    part_summary += _spread(grid_rows, part_models, "grid_offset",
+                            int(seeds[0]), len(sig_grid), None)
+    partition_finding = (
+        f"{len(part_seeds)} KMeans seeds produced {n_km} distinct partition(s) "
+        f"(compared up to cluster renumbering), so the reported k-means blocking "
+        f"is insensitive to its own seed and its SD of 0.000 is a measured null "
+        f"rather than a varied estimate. Redrawing boundaries with a random "
+        f"rotation and grid origin gave "
+        f"{len(sig_grid)} distinct partition(s); that spread is reported as "
+        f"results.boundary_sensitivity, together with the effect of the block "
+        f"count in results.block_sensitivity.")
 
     # ---------- 6. conformal interval under spatial CV --------------------
     best = max((r for r in gap_rows if r["model"] != "mean_baseline"),
@@ -459,7 +496,7 @@ def main(argv=None):
     # ---------- 8. write artefacts ----------------------------------------
     out_prefix = Path(a.out) if a.out else Path(a.export) / "results"
     out_prefix.parent.mkdir(parents=True, exist_ok=True)
-    tidy = _tidy(main_rows + noise_rows + shuffle_rows + block_rows + part_rows)
+    tidy = _tidy(main_rows + noise_rows + shuffle_rows + block_rows + part_rows + grid_rows)
     summary = tidy[tidy["seed"].isna()].copy()
     runs = tidy[tidy["seed"].notna()].copy()
     summary.to_csv(out_prefix.with_name(out_prefix.name + "_summary.csv"), index=False)
@@ -526,9 +563,9 @@ def main(argv=None):
                             "randomness only and is exactly 0.000 for deterministic models "
                             "(ridge, PLS). The two uncertainties the fixed partition hides "
                             "are reported separately: where the block boundaries fall "
-                            "(results.partition_sensitivity, blocks redrawn at a constant "
-                            "learner seed) and how many blocks are used "
-                            "(results.block_sensitivity)."),
+                            "(results.partition_sensitivity, methods kmeans_seed and "
+                            "grid_offset) and how many blocks are used "
+                            "(results.block_sensitivity). " + partition_finding),
                         experiment_scope=plan),
         results=dict(main=[{k: v for k, v in r.items() if k != "per_seed"} for r in main_rows],
                      validation_gap=gap_rows,
@@ -536,7 +573,8 @@ def main(argv=None):
                      shuffled_control=[{k: v for k, v in r.items() if k != "per_seed"} for r in shuffle_rows],
                      block_sensitivity=[{k: v for k, v in r.items() if k != "per_seed"} for r in block_rows],
                      partition_sensitivity=part_summary,
-                     partition_rows=[{k: v for k, v in r.items() if k != "per_seed"} for r in part_rows],
+                     partition_rows=[{k: v for k, v in r.items() if k != "per_seed"}
+                                     for r in part_rows + grid_rows],
                      baseline_rmse=base_rmse,
                      interval=interval),
         headline=dict(model=best["model"] if best else None,
@@ -608,10 +646,11 @@ def main(argv=None):
     print(f"  break-even noise ({break_even.get('model', 'n/a')}): "
           f"{ {k: v for k, v in break_even.items() if k != 'model'} }")
     for p in part_summary:
-        sd = f"+/-{p['r2_sd']:.3f}" if p["r2_sd"] is not None else "(single partition)"
-        print(f"  partition sensitivity ({p['model']}, {p['n_partitions']} redraws of "
-              f"{p['blocks']} blocks -> {p['distinct_partitions']} distinct): R2 spatial "
-              f"{p['r2_mean']:.3f} {sd} [range {p['r2_min']:.3f}-{p['r2_max']:.3f}]")
+        sd = f"+/-{p['r2_sd']:.3f}" if p["r2_sd"] else "+/-0.000"
+        print(f"  partition sensitivity ({p['model']}, {p['method']}, "
+              f"{p['n_partitions']} seeds -> {p['distinct_partitions']} distinct "
+              f"partition(s)): R2 spatial {p['r2_mean']:.3f} {sd} "
+              f"[range {p['r2_min']:.3f}-{p['r2_max']:.3f}]")
     print(f"  wrote {export_dir}/results.json, model.joblib, model_meta.json, "
           f"{out_prefix.name}_summary.csv, _runs.csv, _plot.png in "
           f"{time.time() - t_start:.1f}s")
@@ -663,9 +702,17 @@ def _plot(prefix, main_rows, noise_rows, block_rows, interval, base_rmse, gap_ro
         if pts:
             c.plot([p[0] for p in pts], [p[1] for p in pts], marker="o", ms=4, label=model)
     for p in part_summary:
-        if p.get("r2_sd"):            # error bars only where a spread was measured
-            c.errorbar([p["blocks"]], [p["r2_mean"]], yerr=[p["r2_sd"]], fmt="none",
+        if p["blocks"] is None or not p.get("r2_sd"):   # grid cells are not a block count
+            continue
+        c.errorbar([p["blocks"]], [p["r2_mean"]], yerr=[p["r2_sd"]], fmt="none",
                        ecolor="k", capsize=4, lw=1.3, label=f"{p['model']} +/- partition SD")
+    lines = [f"{p['method']}: {p['model'].replace('_', ' ')} "
+             f"{p['r2_mean']:.3f} +/- {(p['r2_sd'] or 0.0):.3f} "
+             f"({p['distinct_partitions']} distinct partition(s))"
+             for p in part_summary]
+    if lines:
+        c.annotate("\n".join(lines), xy=(0.02, 0.03), xycoords="axes fraction", fontsize=6,
+                   va="bottom")
     c.set_xscale("log"); c.set_xlabel("spatial blocks"); c.set_ylabel("R2 (spatial CV)")
     c.set_title("Block size, and the SD from redrawing the blocks")
     c.legend(fontsize=7)
