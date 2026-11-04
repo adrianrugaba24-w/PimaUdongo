@@ -1,0 +1,213 @@
+{
+ "target": "OC",
+ "features": [
+  "pH_H2O",
+  "EC",
+  "Clay",
+  "Sand"
+ ],
+ "log_target": true,
+ "n_rows": 120,
+ "countries": {
+  "Kenya": 43,
+  "Tanzania": 43,
+  "Uganda": 34
+ },
+ "cv_summary": [
+  {
+   "model": "RandomForest",
+   "cv": "random",
+   "noise": 0.0,
+   "rmse": 2.320248102144853,
+   "sd": 0.005287189979505656,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "RandomForest",
+   "cv": "random",
+   "noise": 0.1,
+   "rmse": 2.265650714101822,
+   "sd": 0.00786659700165814,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "RandomForest",
+   "cv": "random",
+   "noise": 0.25,
+   "rmse": 2.3368246497676166,
+   "sd": 0.08700320982620616,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "RandomForest",
+   "cv": "random",
+   "noise": 0.5,
+   "rmse": 2.2035109499813275,
+   "sd": 0.011221660704371179,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "RandomForest",
+   "cv": "random",
+   "noise": 1.0,
+   "rmse": 2.3384043928149176,
+   "sd": 0.04785928642940187,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "RandomForest",
+   "cv": "spatial",
+   "noise": 0.0,
+   "rmse": 2.2669842836641436,
+   "sd": 0.004881268296441694,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "RandomForest",
+   "cv": "spatial",
+   "noise": 0.1,
+   "rmse": 2.266620214410869,
+   "sd": 0.004585875905280749,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "RandomForest",
+   "cv": "spatial",
+   "noise": 0.25,
+   "rmse": 2.234946172777848,
+   "sd": 0.03527888271172065,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "RandomForest",
+   "cv": "spatial",
+   "noise": 0.5,
+   "rmse": 2.1739727955486265,
+   "sd": 0.060320953489669364,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "RandomForest",
+   "cv": "spatial",
+   "noise": 1.0,
+   "rmse": 2.3470296025056596,
+   "sd": 0.03746527260511018,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "Ridge",
+   "cv": "random",
+   "noise": 0.0,
+   "rmse": 2.2504573747726244,
+   "sd": 0.016827022910906885,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "Ridge",
+   "cv": "random",
+   "noise": 0.1,
+   "rmse": 2.2484501837902364,
+   "sd": 0.01737619409569285,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "Ridge",
+   "cv": "random",
+   "noise": 0.25,
+   "rmse": 2.2519406623589835,
+   "sd": 0.004423289096493039,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "Ridge",
+   "cv": "random",
+   "noise": 0.5,
+   "rmse": 2.2421518848192585,
+   "sd": 0.00225518559284995,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "Ridge",
+   "cv": "random",
+   "noise": 1.0,
+   "rmse": 2.254356929806031,
+   "sd": 0.02825747518702734,
+   "baseline": 2.177405759308014
+  },
+  {
+   "model": "Ridge",
+   "cv": "spatial",
+   "noise": 0.0,
+   "rmse": 2.225455510129164,
+   "sd": 0.005247493632314499,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "Ridge",
+   "cv": "spatial",
+   "noise": 0.1,
+   "rmse": 2.2245670086340645,
+   "sd": 0.004186604588930676,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "Ridge",
+   "cv": "spatial",
+   "noise": 0.25,
+   "rmse": 2.2316155874514987,
+   "sd": 0.003907466244856926,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "Ridge",
+   "cv": "spatial",
+   "noise": 0.5,
+   "rmse": 2.22655903293992,
+   "sd": 0.009457135595226287,
+   "baseline": 2.1746438735906053
+  },
+  {
+   "model": "Ridge",
+   "cv": "spatial",
+   "noise": 1.0,
+   "rmse": 2.2370151629912285,
+   "sd": 0.034546558487990923,
+   "baseline": 2.1746438735906053
+  }
+ ],
+ "break_even_noise": 0.0,
+ "interval": {
+  "level": 0.9,
+  "half_width": 3.9899049030597302,
+  "source": "90th percentile of absolute spatial-CV residuals (Random Forest)"
+ },
+ "feature_ranges": {
+  "pH_H2O": [
+   4.805167770156928,
+   7.037611044603603,
+   6.023022874332865
+  ],
+  "EC": [
+   0.01,
+   0.6715444815250987,
+   0.13267978382927792
+  ],
+  "Clay": [
+   11.133050269042505,
+   49.578971174493994,
+   30.24697876307097
+  ],
+  "Sand": [
+   14.548869154930115,
+   63.424032891953345,
+   39.052063751176846
+  ]
+ },
+ "noise_levels": [
+  0.0,
+  0.1,
+  0.25,
+  0.5,
+  1.0
+ ]
+}
