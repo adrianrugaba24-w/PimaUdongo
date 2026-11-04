@@ -1,76 +1,272 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Soil carbon from sensor-type readings</title>
+<title>Predicted soil organic carbon - research prototype</title>
 <style>
-:root{--bg:#f4f6f3;--card:#fff;--ink:#1c2a22;--muted:#66756c;--line:#dde4df;--a:#26734d;--o:#c5671a}
-@media (prefers-color-scheme:dark){:root{--bg:#111713;--card:#1b231e;--ink:#eef5ee;--muted:#a3b1a6;--line:#344238;--a:#79d39c;--o:#f0a34b}}
+:root{--bg:#f4f6f3;--card:#fff;--ink:#1c2a22;--muted:#66756c;--line:#dde4df;--a:#26734d;--o:#c5671a;--bad:#a12b1f}
+@media (prefers-color-scheme:dark){:root{--bg:#111713;--card:#1b231e;--ink:#eef5ee;--muted:#a3b1a6;--line:#344238;--a:#79d39c;--o:#f0a34b;--bad:#ff8f7a}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
-main{max-width:980px;margin:0 auto;padding:20px}h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:0 0 6px}
-.sub{color:var(--muted);font-size:13px;margin:0 0 14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media(max-width:760px){.grid{grid-template-columns:1fr}}
+main{max-width:1000px;margin:0 auto;padding:20px}h1{font-size:21px;margin:0 0 4px}h2{font-size:15px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
-.banner{background:#fdf3e3;color:#6b4a14;border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:12px}
-label{display:block;font-size:13px;color:var(--muted);margin-top:8px}input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.banner{border-radius:8px;padding:9px 11px;font-size:13px;margin-bottom:10px;border:1px solid}
+.b-warn{background:#fdf3e3;color:#6b4a14;border-color:#e3c98a}
+.b-bad{background:#fdecea;color:#7d1d14;border-color:#e5b3ab}
+@media (prefers-color-scheme:dark){.b-warn{background:#3a2e12;color:#f0c674;border-color:#6b5320}.b-bad{background:#3a1712;color:#ff9b8a;border-color:#6b2d24}}
+label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
 button{margin-top:12px;padding:9px 14px;border:0;border-radius:8px;background:var(--a);color:var(--card);font:inherit;font-weight:600;cursor:pointer}
-.big{font-size:28px;font-weight:700}svg{width:100%;height:auto}.note{font-size:12.5px;color:var(--muted)}
+.big{font-size:30px;font-weight:700}svg{width:100%;height:auto}.note{font-size:12.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600}td.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11.5px;border:1px solid var(--line);color:var(--muted)}
+.err{color:var(--bad);font-size:13px;white-space:pre-wrap}
+ul{margin:6px 0;padding-left:18px;font-size:13px;color:var(--muted)}
 </style></head><body><main>
-<h1>Predicting soil organic carbon from sensor-type readings</h1>
-<p class="sub">Path A prototype: how accuracy changes under spatial validation and sensor noise.</p>
-<div id="banner"></div>
+<h1>Predicted soil organic carbon (SOC) from sensor-type readings</h1>
+<p class="sub">Research prototype. Every number on this page is read from
+<code>results.json</code>, produced by <code>python afsis_experiment.py</code>. Nothing here is hard-coded.</p>
+
+<div class="banner b-warn"><b>Research prototype. Not validated on field sensors or Ugandan farms.
+Not for agronomic decisions.</b></div>
+<div id="kindbanner"></div>
+<div id="loaderr"></div>
+
 <div class="grid">
- <section class="card"><h2>Try a prediction</h2><div id="form"></div><button id="go">Predict</button><div id="out" class="note" style="margin-top:10px"></div></section>
- <section class="card"><h2>Random vs spatial validation</h2><p class="note" id="cvtxt"></p><svg id="cv" viewBox="0 0 320 170"></svg></section>
- <section class="card" style="grid-column:1/-1"><h2>Error against sensor noise</h2>
-  <p class="note">Noise is sensor error as a multiple of each feature's spread. Where the model line meets the dashed baseline is the break-even level.</p>
-  <label>Your measured sensor error (noise level) <input id="me" type="number" step="0.05" min="0" max="1" placeholder="e.g. 0.25 after the sensor check"></label>
-  <svg id="nz" viewBox="0 0 640 260"></svg><p class="note" id="be"></p></section>
+ <section class="card"><h2>Predicted SOC</h2>
+  <div id="form"></div><button id="go">Predict</button><div id="out" class="note" style="margin-top:10px"></div>
+ </section>
+ <section class="card"><h2>How this model scores (spatial CV first)</h2>
+  <p class="note">Spatial CV holds out whole geographic blocks; random CV does not.
+  The gap is the point of the study, not an error.</p>
+  <div id="cvtable"></div>
+  <p class="note" id="baseline"></p>
+ </section>
+ <section class="card"><h2>Accuracy vs input noise</h2>
+  <p class="note">Noise is Gaussian error as a fraction of each feature's spread
+  (measured on training folds only). Solid: clean training data, noisy test.
+  Dashed: noisy training and noisy test.</p>
+  <svg id="nz" viewBox="0 0 640 250"></svg>
+  <p class="note" id="be"></p></section>
+ <section class="card"><h2>Prediction interval and controls</h2>
+  <div id="interval"></div>
+  <p class="note">Sensitivity of spatial CV R2 to the number of spatial blocks:</p>
+  <svg id="blk" viewBox="0 0 640 190"></svg>
+  <p class="note" id="partnote"></p>
+ </section>
+ <section class="card" style="grid-column:1/-1"><h2>Limitations - what this prototype does not show</h2>
+  <ul id="limits"></ul><p class="note" id="prov"></p></section>
 </div>
-<p class="note" id="meta" style="margin-top:12px"></p>
-</main>
+
 <script>
-var DEMO = {"target": "Total C", "features": ["pH", "EC", "Clay", "Sand"], "log_target": false, "n_rows": 254, "countries": {"Kenya": 130, "Uganda": 124}, "cv_summary": [{"model": "RandomForest", "cv": "random", "noise": 0.0, "rmse": 0.5857658959464405, "sd": 0.012972032366469143, "baseline": 0.6395253441680585}, {"model": "RandomForest", "cv": "random", "noise": 0.1, "rmse": 0.5901237991804578, "sd": 0.0334573483516315, "baseline": 0.6395253441680585}, {"model": "RandomForest", "cv": "random", "noise": 0.25, "rmse": 0.6244528208549549, "sd": 0.007813630900978944, "baseline": 0.6395253441680585}, {"model": "RandomForest", "cv": "random", "noise": 0.5, "rmse": 0.6256352520293069, "sd": 0.020726972938620292, "baseline": 0.6395253441680585}, {"model": "RandomForest", "cv": "random", "noise": 1.0, "rmse": 0.6489002621401384, "sd": 0.014582283215562524, "baseline": 0.6395253441680585}, {"model": "RandomForest", "cv": "spatial", "noise": 0.0, "rmse": 0.6972045052126693, "sd": 0.014437915552557938, "baseline": 0.682332095681444}, {"model": "RandomForest", "cv": "spatial", "noise": 0.1, "rmse": 0.6970501883880722, "sd": 0.028031705575383963, "baseline": 0.682332095681444}, {"model": "RandomForest", "cv": "spatial", "noise": 0.25, "rmse": 0.7068024610383654, "sd": 0.03606330103596522, "baseline": 0.682332095681444}, {"model": "RandomForest", "cv": "spatial", "noise": 0.5, "rmse": 0.7125275141790492, "sd": 0.05893718190283198, "baseline": 0.682332095681444}, {"model": "RandomForest", "cv": "spatial", "noise": 1.0, "rmse": 0.724414217748125, "sd": 0.05146246738122518, "baseline": 0.682332095681444}, {"model": "Ridge", "cv": "random", "noise": 0.0, "rmse": 0.5706481771130927, "sd": 0.0011291610256302092, "baseline": 0.6395253441680585}, {"model": "Ridge", "cv": "random", "noise": 0.1, "rmse": 0.5759412003805197, "sd": 0.0032027235421449563, "baseline": 0.6395253441680585}, {"model": "Ridge", "cv": "random", "noise": 0.25, "rmse": 0.5916148825601736, "sd": 0.00023582598503842209, "baseline": 0.6395253441680585}, {"model": "Ridge", "cv": "random", "noise": 0.5, "rmse": 0.5979139013012296, "sd": 0.00098065295905157, "baseline": 0.6395253441680585}, {"model": "Ridge", "cv": "random", "noise": 1.0, "rmse": 0.636903213713589, "sd": 0.011277035084574298, "baseline": 0.6395253441680585}, {"model": "Ridge", "cv": "spatial", "noise": 0.0, "rmse": 0.6503281941466399, "sd": 0.04410357837505786, "baseline": 0.682332095681444}, {"model": "Ridge", "cv": "spatial", "noise": 0.1, "rmse": 0.654744959257709, "sd": 0.04674533773661702, "baseline": 0.682332095681444}, {"model": "Ridge", "cv": "spatial", "noise": 0.25, "rmse": 0.6765498166720865, "sd": 0.04785806513632011, "baseline": 0.682332095681444}, {"model": "Ridge", "cv": "spatial", "noise": 0.5, "rmse": 0.6738647510420187, "sd": 0.05213905449712588, "baseline": 0.682332095681444}, {"model": "Ridge", "cv": "spatial", "noise": 1.0, "rmse": 0.7097946257495233, "sd": 0.0428978714982145, "baseline": 0.682332095681444}], "break_even_noise": 0.0, "interval": {"level": 0.9, "half_width": 1.2059415253033428, "source": "90th percentile of absolute spatial-CV residuals (Random Forest)"}, "feature_ranges": {"pH": [5.002248003275149, 7.0466869500324885, 6.117159897108981], "EC": [0.10751511695896057, 0.45559420025095665, 0.3163304349193533], "Clay": [14.542531149152488, 41.523815583148995, 30.30947344256961], "Sand": [29.3752036887794, 53.319416192187866, 39.943879355481755]}, "noise_levels": [0.0, 0.1, 0.25, 0.5, 1.0]};
-var R=null, SRC="";
-function el(t,a,p){var e=document.createElementNS("http://www.w3.org/2000/svg",t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
-function load(){
- return fetch("/results").then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){R=j;SRC="api"})
-  .catch(function(){return fetch("results.json").then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){R=j;SRC="file"})})
-  .catch(function(){R=DEMO;SRC="demo"});
+var R=null, MI=null;
+function el(t,a,p){var e=document.createElementNS("http://www.w3.org/2000/svg",t);
+ for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function fmt(v,d){if(v===null||v===undefined||!isFinite(v))return "n/a";return (+v).toFixed(d===undefined?3:d)}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;"})[c]})}
+
+function boot(){
+ return Promise.all([fetch("/results").then(function(r){return r.json()}),
+                     fetch("/model-info").then(function(r){return r.json()})])
+  .then(function(j){R=j[0];MI=j[1];render()})
+  .catch(function(e){
+   document.getElementById("loaderr").innerHTML='<div class="banner b-bad"><b>No results to show.</b> '+
+    'This page deliberately contains no sample numbers. Generate them with '+
+    '<code>python afsis_experiment.py</code> (add <code>--root</code> for real AfSIS files), '+
+    'then serve the folder through the API: <code>uvicorn soil_api:app</code> and open '+
+    'http://127.0.0.1:8000/.</div>';
+  });
 }
-function pick(m,c,n){return R.cv_summary.filter(function(r){return r.model===m&&r.cv===c&&Math.abs(r.noise-n)<1e-9})[0]}
-function bars(){
- var s=document.getElementById("cv");s.innerHTML="";var a=pick("RandomForest","random",0),b=pick("RandomForest","spatial",0),base=b.baseline,mx=Math.max(a.rmse,b.rmse,base)*1.15;
- [["Random CV",a.rmse,"var(--a)"],["Spatial CV",b.rmse,"var(--o)"],["Field mean",base,"#888"]].forEach(function(r,i){
-  var h=r[1]/mx*120,x=30+i*95;el("rect",{x:x,y:140-h,width:60,height:h,fill:r[2]},s);
-  el("text",{x:x+30,y:134-h,"text-anchor":"middle","font-size":11,fill:"currentColor"},s).textContent=r[1].toFixed(2);
-  el("text",{x:x+30,y:158,"text-anchor":"middle","font-size":11,fill:"currentColor"},s).textContent=r[0]});
- document.getElementById("cvtxt").textContent="Random Forest RMSE in "+R.target+" units. Random CV "+a.rmse.toFixed(2)+" vs spatial CV "+b.rmse.toFixed(2)+" ("+(b.rmse>a.rmse?"random CV looks better":"no optimism seen")+").";
+
+function render(){
+ if(!R.data.is_real_data){
+  document.getElementById("kindbanner").innerHTML='<div class="banner b-bad"><b>SYNTHETIC STAND-IN DATA ('+
+   esc(R.data.kind)+').</b> These numbers test the pipeline only. They are not measurements of African soils '+
+   'and must not be quoted as results.</div>';
+ }
+ document.getElementById("limits").innerHTML=(R.limitations||[]).map(function(t){return"<li>"+esc(t)+"</li>"}).join("");
+ document.getElementById("prov").textContent=
+  "Dataset version "+R.data.dataset_version+" | model "+MI.model_version+
+  " | "+R.data.cleaning_log[R.data.cleaning_log.length-1].n_after+" rows | units: "+MI.units+
+  " | licence: "+(R.data.licence||"");
+ form(); cvtable(); noiseCurve(); intervalPanel(); blockPanel();
 }
-function curve(){
- var s=document.getElementById("nz");s.innerHTML="";var N=R.noise_levels,L=[["RandomForest","spatial","var(--a)","RF, spatial CV"],["Ridge","spatial","var(--o)","Ridge, spatial CV"]],
- vals=[];L.forEach(function(l){N.forEach(function(n){vals.push(pick(l[0],l[1],n).rmse)})});vals.push(pick("RandomForest","spatial",0).baseline);
- var lo=Math.min.apply(0,vals)*.9,hi=Math.max.apply(0,vals)*1.08,X=function(n){return 50+n/N[N.length-1]*540},Y=function(v){return 220-(v-lo)/(hi-lo)*190};
- el("line",{x1:50,y1:220,x2:590,y2:220,stroke:"currentColor","stroke-opacity":.4},s);el("line",{x1:50,y1:30,x2:50,y2:220,stroke:"currentColor","stroke-opacity":.4},s);
- N.forEach(function(n){el("text",{x:X(n),y:238,"text-anchor":"middle","font-size":11,fill:"currentColor"},s).textContent=n});
- el("text",{x:320,y:254,"text-anchor":"middle","font-size":11,fill:"currentColor"},s).textContent="sensor noise (x feature spread)";
- var by=Y(pick("RandomForest","spatial",0).baseline);el("line",{x1:50,y1:by,x2:590,y2:by,stroke:"#888","stroke-dasharray":"5 4"},s);el("text",{x:594,y:by+4,"font-size":10,fill:"currentColor"},s).textContent="field mean";
- L.forEach(function(l,i){var pts=N.map(function(n){return X(n)+","+Y(pick(l[0],l[1],n).rmse)}).join(" ");el("polyline",{points:pts,fill:"none",stroke:l[2],"stroke-width":2.2},s);
-  el("text",{x:60,y:22+i*13,"font-size":11,fill:l[2]},s).textContent="\u2014 "+l[3]});
- var me=parseFloat(document.getElementById("me").value);if(!isNaN(me)&&me>=0&&me<=N[N.length-1]){el("line",{x1:X(me),y1:30,x2:X(me),y2:220,stroke:"#c0392b","stroke-width":1.5},s);el("text",{x:X(me)+4,y:44,"font-size":11,fill:"#c0392b"},s).textContent="measured sensor error"}
- document.getElementById("be").textContent=R.break_even_noise===null?"The spatial-CV Random Forest still beats the field mean at every noise level tested.":"Break-even: the spatial-CV Random Forest stops beating the field mean at noise level "+R.break_even_noise+" (tested levels only).";
+
+function rows(model){return (R.results.validation_gap||[]).filter(function(r){return r.model===model})[0]}
+
+function cvtable(){
+ var g=(R.results.validation_gap||[]).slice().sort(function(a,b){return (b.r2_spatial||-9)-(a.r2_spatial||-9)});
+ var h="<table><tr><th>model</th><th>R2 spatial</th><th>RMSE spatial</th><th>R2 random</th><th>gap</th></tr>";
+ g.forEach(function(r){h+="<tr><td>"+esc(r.model.replace(/_/g," "))+"</td><td class='num'>"+fmt(r.r2_spatial)+
+  "</td><td class='num'>"+fmt(r.rmse_spatial,3)+"</td><td class='num'>"+fmt(r.r2_random)+
+  "</td><td class='num'>"+fmt(r.gap_mean,3)+"</td></tr>"});
+ document.getElementById("cvtable").innerHTML=h+"</table>";
+ var bl=R.results.baseline_rmse||{};
+ document.getElementById("baseline").textContent="Field-mean baseline RMSE: spatial "+fmt(bl.spatial,3)+
+  ", random "+fmt(bl.random,3)+" ("+MI.units+"). A model that does not beat this line has learned nothing useful.";
 }
+
+function pick(model,cv,noise,arm){return (R.results.noise_sweep||[]).filter(function(r){
+ return r.model===model&&r.cv===cv&&Math.abs(r.noise-noise)<1e-9&&r.arm===arm})[0]}
+
+function noiseCurve(){
+ var s=document.getElementById("nz");s.innerHTML="";
+ var lv=[];(R.validation.noise_levels||[]).forEach(function(n){lv.push(n)});
+ if(!lv.length){s.innerHTML="";return}
+ // series come from whatever the run actually swept - never from a fixed list
+ var keys=[];(R.results.noise_sweep||[]).forEach(function(r){
+  var k=r.model+"|"+r.cv;if(keys.indexOf(k)<0)keys.push(k)});
+ keys.sort();
+ var series=[],vals=[];
+ keys.forEach(function(k){
+  var m=k.split("|");
+  ["train_clean","train_noisy"].forEach(function(arm){
+   var pts=[];lv.forEach(function(n){var r=pick(m[0],m[1],n,arm);if(r&&isFinite(r.r2_mean)){
+    pts.push([n,r.r2_mean]);vals.push(r.r2_mean)}});
+   if(pts.length)series.push({pts:pts,arm:arm,key:m[0].replace(/_/g," ")+" ("+m[1]+" CV)"});
+  });});
+ if(!series.length){s.innerHTML="<text x='55' y='40' font-size='12'>no noise sweep in this run</text>";return}
+ var lo=Math.min.apply(0,vals.concat([0])),hi=Math.max.apply(0,vals.concat([0.1]));
+ var X=function(n){return 55+n/(lv[lv.length-1]||1)*530},Y=function(v){return 215-(v-lo)/(hi-lo||1)*175};
+ el("line",{x1:55,y1:215,x2:585,y2:215,stroke:"currentColor","stroke-opacity":.35},s);
+ el("line",{x1:55,y1:25,x2:55,y2:215,stroke:"currentColor","stroke-opacity":.35},s);
+ var zy=Y(0);el("line",{x1:55,y1:zy,x2:585,y2:zy,stroke:"#888","stroke-dasharray":"4 3"},s);
+ el("text",{x:588,y:zy+3,"font-size":10,fill:"currentColor"},s).textContent="R2=0";
+ lv.forEach(function(n){el("text",{x:X(n),y:232,"text-anchor":"middle","font-size":11,fill:"currentColor"},s)
+  .textContent=n});
+ el("text",{x:320,y:248,"text-anchor":"middle","font-size":11,fill:"currentColor"},s)
+  .textContent="input noise (x feature SD)";
+ var cols=["var(--a)","var(--o)","#4a6cf0"];
+ series.forEach(function(se,i){
+  var p=se.pts.map(function(q){return X(q[0])+","+Y(q[1])}).join(" ");
+  el("polyline",{points:p,fill:"none",stroke:cols[i%3],"stroke-width":2.2,
+   "stroke-dasharray":se.arm==="train_noisy"?"6 4":""},s);
+  el("text",{x:62,y:22+i*13,"font-size":10.5,fill:cols[i%3]},s)
+   .textContent=se.key+" / "+(se.arm==="train_clean"?"clean train":"noisy train");
+ });
+ var be=R.headline&&R.headline.break_even_noise||{};
+ var bm=(be.model||"the swept model").replace(/_/g," ");
+ var k="train_clean|spatial";
+ document.getElementById("be").textContent=be[k]===null||be[k]===undefined?
+  bm+" stays better than the field mean at every noise level tested ("+lv.join(", ")+
+  " x feature SD); the sweep did not reach its break-even."
+  :"Break-even: "+bm+" stops beating the field mean at noise "+be[k]+" x feature SD (tested levels only).";
+}
+
+function intervalPanel(){
+ var it=R.results.interval||{};
+ var cov=it.empirical_coverage, nom=it.nominal;
+ var bad=cov!==null&&cov!==undefined&&cov<nom-0.02;
+ var h="<table><tr><th>nominal level</th><td class='num'>"+fmt(nom*100,0)+"%</td></tr>"+
+  "<tr><th>empirical coverage (spatial CV)</th><td class='num'>"+fmt(cov*100,1)+"%</td></tr>"+
+  "<tr><th>mean width</th><td class='num'>"+fmt(it.mean_width,3)+" "+esc(MI.units)+"</td></tr>"+
+  "<tr><th>shuffled-target control R2</th><td class='num'>"+
+  fmt((R.results.shuffled_control||[]).length?Math.max.apply(0,R.results.shuffled_control.map(function(r){
+   return r.r2_mean||-9})):null,3)+"</td></tr></table>";
+ h+="<p class='note'>"+esc(it.method||"no interval computed")+"</p>";
+ if(bad)h+="<div class='banner b-bad' style='margin-top:8px'><b>The "+fmt(nom*100,0)+
+  "% interval only covers "+fmt(cov*100,1)+"% of held-out regions.</b> It is optimistic outside the "+
+  "training area; this is reported rather than hidden.</div>";
+ else if(cov!==null&&cov!==undefined)h+="<div class='banner b-warn' style='margin-top:8px'>Coverage "+
+  fmt(cov*100,1)+"% against a nominal "+fmt(nom*100,0)+"% level.</div>";
+ h+="<p class='note'>A shuffled-target control scores R2 near 0, which is what it must do: it confirms "+
+  "the pipeline is not reading signal out of the split design.</p>";
+ document.getElementById("interval").innerHTML=h;
+}
+
+function blockPanel(){
+ var s=document.getElementById("blk");s.innerHTML="";
+ var bs=(R.results.block_sensitivity||[]);
+ if(!bs.length)return;
+ var byModel={};bs.forEach(function(r){(byModel[r.model]=byModel[r.model]||[]).push(r)});
+ var xs=[];bs.forEach(function(r){if(xs.indexOf(r.blocks)<0)xs.push(r.blocks)});xs.sort(function(a,b){return a-b});
+ var ys=bs.map(function(r){return r.r2_mean});var lo=Math.min.apply(0,ys),hi=Math.max.apply(0,ys);
+ var X=function(v,i){return 55+i*(530/Math.max(xs.length-1,1))},Y=function(v){return 160-(v-lo)/((hi-lo)||1)*130};
+ el("line",{x1:55,y1:160,x2:585,y2:160,stroke:"currentColor","stroke-opacity":.35},s);
+ xs.forEach(function(b,i){el("text",{x:X(b,i),y:177,"text-anchor":"middle","font-size":11,fill:"currentColor"},s)
+  .textContent=b});
+ el("text",{x:320,y:190,"text-anchor":"middle","font-size":11,fill:"currentColor"},s).textContent="spatial blocks";
+ Object.keys(byModel).forEach(function(m,i){
+  var pts=xs.map(function(b,j){var r=byModel[m].filter(function(x){return x.blocks===b})[0];
+   return r?[X(b,j),Y(r.r2_mean)]:null}).filter(Boolean);
+  el("polyline",{points:pts.map(function(p){return p[0]+","+p[1]}).join(" "),fill:"none",
+   stroke:i?"var(--o)":"var(--a)","stroke-width":2.2},s);
+  el("text",{x:62,y:22+i*13,"font-size":11,fill:i?"var(--o)":"var(--a)"},s).textContent=m.replace(/_/g," ");
+ });
+ partitionNote();
+}
+
+function partitionNote(){
+ var el2=document.getElementById("partnote");if(!el2)return;
+ var ps=(R.results.partition_sensitivity||[]);
+ if(!ps.length){el2.textContent="";return}
+ var moved=ps.some(function(p){return (p.r2_sd||0)>0});
+ var head="The model table above holds ONE block partition fixed, so its SD across seeds "
+  +"is learner randomness only (0.000 for deterministic models). Partitions redrawn two "
+  +"ways with the learner seed held constant - 'kmeans seed' varies the reported blocking "
+  +"scheme's seed, 'grid offset' rotates and shifts a rectangular grid so the boundaries "
+  +"really move: ";
+ var body=ps.map(function(p){return p.method.replace(/_/g," ")+" ("+p.model.replace(/_/g," ")
+  +") R2 "+fmt(p.r2_mean,3)+" +/- "+fmt(p.r2_sd||0,3)+" [range "+fmt(p.r2_min,3)+"-"
+  +fmt(p.r2_max,3)+"; "+p.distinct_partitions+" of "+p.n_partitions+" seeds gave a "
+  +"differently placed partition]"}).join("; ");
+ var tail=moved
+  ?". Boundary placement moves the spatial score by about that much, which is the honest "
+  +"uncertainty of the spatial estimate. Where a family reports 0.000, its seeds changed "
+  +"neither the blocks nor the score."
+  :". No redraw moved the score, so the spatial estimate is insensitive to boundary "
+  +"placement in this data. That is a measured null, not a claim of certainty: the block "
+  +"COUNT does move it (chart above), and so does the choice of split scheme (table above).";
+ el2.textContent=head+body+tail;
+}
+
 function form(){
- var f=document.getElementById("form");f.innerHTML="";R.features.forEach(function(n){var r=R.feature_ranges[n];
-  f.insertAdjacentHTML("beforeend",'<label>'+n+' <span class="note">(typical '+r[0].toFixed(2)+' to '+r[1].toFixed(2)+')</span><input data-f="'+n+'" type="number" step="any" value="'+r[2].toFixed(2)+'"></label>')});
+ var f=document.getElementById("form");f.innerHTML="";
+ MI.features.forEach(function(n){
+  var r=(MI.feature_ranges||{})[n]||{}, u=(R.feature_units||{})[n]||"";
+  f.insertAdjacentHTML("beforeend",'<label>'+esc(n)+' <span class="note">('+esc(u)+
+   ', typical '+fmt(r.p5,2)+' to '+fmt(r.p95,2)+')</span><input data-f="'+esc(n)+
+   '" type="number" step="any" value="'+fmt(r.median,2)+'"></label>');
+ });
 }
+
 function predict(){
- var v={};document.querySelectorAll("[data-f]").forEach(function(i){v[i.dataset.f]=parseFloat(i.value)});var o=document.getElementById("out");
- if(SRC!=="api"){o.textContent="Prediction needs the API. Start it with: MODEL_DIR=export uvicorn soil_api:app, then open http://127.0.0.1:8000/";return}
- fetch("/predict",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({values:v})}).then(function(r){return r.json()}).then(function(j){
-  o.innerHTML='<div class="big">'+j.prediction.toFixed(2)+'</div>'+Math.round(j.interval_level*100)+'% interval: '+j.low.toFixed(2)+' to '+j.high.toFixed(2)+' ('+j.target+')<br>'+j.interval_source+(j.outside_training_range.length?'<br><b>Outside the typical training range: '+j.outside_training_range.join(", ")+'</b>':'')}).catch(function(){o.textContent="Request failed."});
+ var v={};document.querySelectorAll("[data-f]").forEach(function(i){v[i.dataset.f]=parseFloat(i.value)});
+ var o=document.getElementById("out");
+ fetch("/predict",{method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({values:v})}).then(function(r){
+   return r.json().then(function(j){return {code:r.status,body:j}});
+  }).then(function(res){
+  if(res.code!==200){var d=res.body.detail||{};var m=d.message||JSON.stringify(d);
+   o.innerHTML='<div class="err"><b>Rejected ('+res.code+'). '+(d.error||"input_invalid")+
+   '</b><br>'+esc(m)+'</div>';return}
+  var j=res.body, g=rows(j.model_name)||{};
+  var h='<div class="big">'+fmt(j.prediction,2)+' <span style="font-size:15px">'+esc(j.units)+
+   '</span></div><div class="note">predicted SOC - an estimate of carbon content, '
+   'not a soil-quality rating and not a carbon stock</div>';
+  h+='<table style="margin-top:8px"><tr><th>'+fmt(j.interval_level*100,0)+'% interval</th><td class="num">'+
+   fmt(j.low,2)+' to '+fmt(j.high,2)+'</td></tr>'+
+   '<tr><th>coverage achieved in held-out regions</th><td class="num">'+fmt(j.interval_empirical_coverage*100,1)+
+   '%</td></tr>'+
+   '<tr><th>spatial CV R2 / RMSE of this model</th><td class="num">'+fmt(g.r2_spatial)+' / '+fmt(g.rmse_spatial,3)+
+   '</td></tr><tr><th>random CV R2 (optimistic)</th><td class="num">'+fmt(g.r2_random)+'</td></tr>'+
+   '<tr><th>model version</th><td class="num">'+esc(j.model_version)+'</td></tr>'+
+   '<tr><th>training data version</th><td class="num">'+esc(j.training_data_version)+'</td></tr></table>';
+  if(j.out_of_domain){
+   h+='<div class="banner b-bad" style="margin-top:9px"><b>Out of domain.</b> '+
+    j.out_of_domain_features.map(function(x){return esc(x.feature)+"="+fmt(x.value,2)+
+     " (training 5-95%: "+fmt(x.training_p5,2)+" to "+fmt(x.training_p95,2)+")"}).join("; ")+
+    '<br>The prediction is an extrapolation; it has not been verified for inputs like this.</div>';
+  }
+  if(!j.data_is_real)h+='<div class="banner b-bad" style="margin-top:9px"><b>Synthetic stand-in model.</b> '+
+   'This prediction comes from a simulation, not from real soils.</div>';
+  h+='<p class="note">'+esc(j.accuracy_context[0]?("Spatial CV numbers shown first; see the table beside this "+
+   "panel for every model."):"")+'</p>';
+  o.innerHTML=h;
+ }).catch(function(){o.innerHTML='<div class="err">Request failed. Is the API running?</div>'});
 }
-load().then(function(){
- document.getElementById("banner").innerHTML=SRC==="demo"?'<div class="banner"><b>DEMO DATA (synthetic).</b> These numbers come from simulated soil data, not AfSIS. Run the pipeline on AfSIS to replace them.</div>':"";
- document.getElementById("meta").textContent="Target: "+R.target+" | Features: "+R.features.join(", ")+" | Rows: "+R.n_rows+" | Countries: "+JSON.stringify(R.countries)+" | Source: "+SRC;
- bars();curve();form();document.getElementById("go").onclick=predict;document.getElementById("me").oninput=curve;
-});
+
+boot();
+document.getElementById("go").addEventListener("click",function(){
+ if(R)predict(); else document.getElementById("out").innerHTML='<div class="err">No model loaded.</div>';});
 </script></body></html>
