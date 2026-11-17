@@ -25,3 +25,4 @@ Sunday
 - Columns are auto-detected only as a guess; always check what the script prints.
 - The interval is the 90th percentile of absolute spatial-CV residuals, not a formal guarantee.
 - AfSIS licence: the AWS registry says ODbL (attribution), the dataset README says ODC-By. Read the LICENSE file and credit AfSIS.
+"# PimaUgandaV3" 
