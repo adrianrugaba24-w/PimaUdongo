@@ -1,0 +1,226 @@
+{
+  "project": "PimaUdongo",
+  "target": "OC",
+  "features": [
+    "pH_H2O",
+    "EC",
+    "Moisture",
+    "Temperature"
+  ],
+  "log_target": true,
+  "n_samples": 350,
+  "anchor_mukono": {
+    "latitude": 0.3547,
+    "longitude": 32.7475,
+    "location_name": "Mukono, Uganda (Lake Victoria Basin)"
+  },
+  "spatial_distance_to_mukono": {
+    "median_km": 2983.5801727363178,
+    "mean_km": 2440.2026058154997,
+    "min_km": 16.27031125088524,
+    "max_km": 4250.784583697337,
+    "p25_km": 516.3535974000491,
+    "p75_km": 3592.4021215393886
+  },
+  "epistemic_honesty_statement": "Regional Continental Prior Extrapolation Notice: Training data consists of open regional African wet-chemistry data with median distance of 2983.6 km from Mukono, Uganda. This model operates as an empirical regional prior extrapolation, NOT a hyper-local field fit. Sensor telemetry consists strictly of proximal physical proxies (moisture, temperature, pH, electrical conductivity). No direct physical NPK sensor measurements are claimed.",
+  "conformal_interval": {
+    "confidence_level": 0.9,
+    "ridge_half_width_soc": 1.3223788154754728,
+    "rf_half_width_soc": 1.351478970272604,
+    "nominal_reported_half_width": 0.41,
+    "calibration_source": "Empirical (1-alpha) quantile of out-of-fold Spatial Block CV residuals"
+  },
+  "spatial_optimism_gap_rmse": -0.005612228116659623,
+  "break_even_noise": 1.0,
+  "noise_levels": [
+    0.0,
+    0.1,
+    0.25,
+    0.5,
+    1.0
+  ],
+  "cv_summary": [
+    {
+      "model": "RandomForest",
+      "cv": "random",
+      "noise": 0.0,
+      "rmse": 0.9803950687560636,
+      "sd": 0.021571241996902402,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "RandomForest",
+      "cv": "random",
+      "noise": 0.1,
+      "rmse": 0.9863722206216888,
+      "sd": 0.019170991852606952,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "RandomForest",
+      "cv": "random",
+      "noise": 0.25,
+      "rmse": 0.9957145014949341,
+      "sd": 0.025402944359014776,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "RandomForest",
+      "cv": "random",
+      "noise": 0.5,
+      "rmse": 1.0012615129303002,
+      "sd": 0.008066933455697048,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "RandomForest",
+      "cv": "random",
+      "noise": 1.0,
+      "rmse": 1.0281998416007172,
+      "sd": 0.012067838135403325,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "RandomForest",
+      "cv": "spatial",
+      "noise": 0.0,
+      "rmse": 0.974782840639404,
+      "sd": 0.014210656778542068,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "RandomForest",
+      "cv": "spatial",
+      "noise": 0.1,
+      "rmse": 0.9915907752265481,
+      "sd": 0.007576141492657706,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "RandomForest",
+      "cv": "spatial",
+      "noise": 0.25,
+      "rmse": 0.9781769816488377,
+      "sd": 0.04117713547778568,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "RandomForest",
+      "cv": "spatial",
+      "noise": 0.5,
+      "rmse": 0.9970288977902774,
+      "sd": 0.01052077932151774,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "RandomForest",
+      "cv": "spatial",
+      "noise": 1.0,
+      "rmse": 1.0333475945066024,
+      "sd": 0.028617320219640554,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "Ridge",
+      "cv": "random",
+      "noise": 0.0,
+      "rmse": 0.9325268617019461,
+      "sd": 0.007568567131822578,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "Ridge",
+      "cv": "random",
+      "noise": 0.1,
+      "rmse": 0.933746779476556,
+      "sd": 0.004553271061169199,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "Ridge",
+      "cv": "random",
+      "noise": 0.25,
+      "rmse": 0.9352788433182032,
+      "sd": 0.009520029263917842,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "Ridge",
+      "cv": "random",
+      "noise": 0.5,
+      "rmse": 0.9506673628355413,
+      "sd": 0.013173793788366086,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "Ridge",
+      "cv": "random",
+      "noise": 1.0,
+      "rmse": 0.9963898990816826,
+      "sd": 0.011027468930302438,
+      "baseline": 1.0249340770644406
+    },
+    {
+      "model": "Ridge",
+      "cv": "spatial",
+      "noise": 0.0,
+      "rmse": 0.9253007735540818,
+      "sd": 0.008805979351331818,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "Ridge",
+      "cv": "spatial",
+      "noise": 0.1,
+      "rmse": 0.9267947275404645,
+      "sd": 0.013614191106743301,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "Ridge",
+      "cv": "spatial",
+      "noise": 0.25,
+      "rmse": 0.9278312799120173,
+      "sd": 0.013121059214080286,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "Ridge",
+      "cv": "spatial",
+      "noise": 0.5,
+      "rmse": 0.9491698376026877,
+      "sd": 0.02201392112123171,
+      "baseline": 1.0259542532239736
+    },
+    {
+      "model": "Ridge",
+      "cv": "spatial",
+      "noise": 1.0,
+      "rmse": 0.992210296314945,
+      "sd": 0.013784660410202893,
+      "baseline": 1.0259542532239736
+    }
+  ],
+  "feature_ranges": {
+    "pH_H2O": [
+      4.68219055630598,
+      6.833501061849295,
+      5.807871797005956
+    ],
+    "EC": [
+      0.02,
+      0.5848404488407931,
+      0.1296748339326444
+    ],
+    "Moisture": [
+      6.6773640975357385,
+      35.566358525067834,
+      23.060288422596493
+    ],
+    "Temperature": [
+      18.746075826153255,
+      30.062165470999236,
+      24.380872476753133
+    ]
+  }
+}

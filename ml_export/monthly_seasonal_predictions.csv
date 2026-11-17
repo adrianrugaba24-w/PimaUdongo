@@ -1,0 +1,13 @@
+Month,Moisture (%),Temp (°C),pH,EC (µS/cm),Predicted SOC (%),Delta vs Jan (%),Season
+January,14.5,28.2,5.75,170.0,3.358,0.0,Dry Season
+February,12.0,29.5,5.8,185.0,3.265,-0.093,Dry Season
+March,26.5,25.0,5.65,215.0,4.549,1.192,Wet (Long Rains)
+April,34.0,23.8,5.5,230.0,5.747,2.389,Wet (Long Rains)
+May,30.5,24.2,5.55,220.0,5.342,1.984,Wet (Long Rains)
+June,18.0,26.0,5.7,190.0,3.773,0.415,Dry Season
+July,15.0,26.5,5.75,180.0,3.507,0.149,Dry Season
+August,20.0,25.5,5.7,195.0,3.93,0.572,Dry Season
+September,25.0,24.8,5.6,210.0,4.541,1.183,Dry Season
+October,31.0,24.0,5.52,225.0,5.332,1.974,Wet (Short Rains)
+November,32.5,23.9,5.48,228.0,5.629,2.272,Wet (Short Rains)
+December,19.5,26.8,5.68,192.0,3.693,0.335,Dry Season
